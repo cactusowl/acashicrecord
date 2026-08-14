@@ -1,2 +1,13 @@
 /bin/
 *.prefs
+
+# Syncthing scratch (in-progress transfers, version history, folder markers)
+.syncthing.*
+~syncthing~*
+.stversions/
+.stfolder
+
+# editor swap/backup files
+*.swp
+*.swo
+*~
