@@ -58,7 +58,7 @@ DMI.CGrid = Utils.Class(function( domname, data, columns, options) {
 		forceFitColumns: true
 	};
 	if (options)
-		for (k in options) this.options[k] = options[k];
+		for (var k in options) this.options[k] = options[k];
 
 	//full wrapper for this page
 	this.domsel = "#"+domname+"-page";
@@ -167,7 +167,8 @@ DMI.CGrid = Utils.Class(function( domname, data, columns, options) {
 			$("#global-clear-filters-btn").hide();
 	}
 	function checkClearFilters() {
-		$property = $(this).parents('.property');
+		var $property = $(this).parents('.property');
+		var $panel;
 		if($property.length){
 			if ($property.find(" input[type=text]:[value^='']").length
 				|| $property.find(" textarea:[value^='']").length
@@ -216,7 +217,7 @@ DMI.CGrid = Utils.Class(function( domname, data, columns, options) {
 	$(that.domselp+" input[type=number]").bind('change click', 	function(e) { that.doSearch(); $(this).saveState(); checkClearFilters.call(this); });
 	$(that.domselp+" select").bind('change', 			function(e) { that.doSearch(); $(this).saveState(); checkClearFilters.call(this); });
 	$(that.domselp+" input.clear-filters-btn").click(function(e) {
-		$panel = $(this).parents('.panel');
+		var $panel = $(this).parents('.panel');
 		//removes additional properties
 		if($panel.hasClass("property") && !$panel.is(".property:first-child")){
 			$panel.remove();
@@ -236,7 +237,7 @@ DMI.CGrid = Utils.Class(function( domname, data, columns, options) {
 		$panel.find(" input[type=text]").first().focus();
 	});
 	$(that.domselp+" input.zero-levels-btn").click(function(e) {
-		$panel = $(this).parents('.panel');
+		var $panel = $(this).parents('.panel');
 
 		$(that.domselp+" input.level-path").val('0').saveState();
 
@@ -451,6 +452,16 @@ DMI.CGrid = Utils.Class(function( domname, data, columns, options) {
 		return args;
 	}
 
+	//the custom-js box lives inside a property panel but is not a property match,
+	//so it has to be pulled out before Utils.propertiesWithKeys discards the
+	//key-less entries. (without this the whole feature is inert.)
+	this.getCustomJs = function(propertyArgs) {
+		if (!DMI.Options['Custom js']) return null;
+		for (var i=0; i<propertyArgs.length; i++)
+			if (propertyArgs[i].customjs) return propertyArgs[i].customjs;
+		return null;
+	}
+
 	function filterAndUpdate() {
 		var args = that.getSearchArgs(that.domsel);
 		var renderedRange = that.grid.getRenderedRange();
@@ -569,7 +580,7 @@ DMI.customFilter = function(o, customjs) {
 		return result;
 	}
 	catch(e) {
-		$('#custom-js-error').html(String(e));
+		$('#custom-js-error').text(String(e));
 		return '#ERROR#';
 	}
 //	return true;

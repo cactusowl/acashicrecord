@@ -73,26 +73,17 @@ DMI.continueLoading = function() {
 		downloadData( g_data );
 		return;
 
-	case 'Downloading mobile files':
-		g_data.status = 'Parsing mobile data';
-		downloadData( g_data );
-		return;
-
 	case 'Parsing data':
 		g_data.status = 'Init interface';
-		parseData( g_data );
-		return;
-
-	case 'Parsing mobile data':
-		g_data.status = 'Init mobile interface';
 		parseData( g_data );
 		return;
 
 	case 'Init interface':
 		//set list of loaded mods (clears loading msg)
 		//note these are full names grabbed when parsing not filenames
+		//NB: these are #modname strings straight out of the mod file - escape them
 		if (DMI.modctx.loadedmods.length)
-			$('#page-status').html(DMI.modctx.loadedmods.join(',<br /> '));
+			$('#page-status').html(DMI.modctx.loadedmods.map(Utils.escapeHtml).join(',<br /> '));
 		else
 			$('#page-status').html('No mods loaded');
 
@@ -102,19 +93,7 @@ DMI.continueLoading = function() {
 
 		DMI.initGrids(); //back to main.js
 		return;
-
-	case 'Init mobile interface':
-		g_data.status = 'relax! have a beer';
-		g_data = null; //oops
-
-		DMI.initMobile();
-		return;
 	}
-}
-
-DMI.mobileLoading = function() {
-	g_data.status = g_data.status || 'Downloading mobile files';
-	DMI.continueLoading();
 }
 
 function loadModList( g_data ) {
@@ -144,22 +123,25 @@ function loadLocalMods( g_data ) {
 	g_data.server_mods_to_load = (new ParsedQueryString()).params("mod");
 	g_data.local_mods_to_load = (new ParsedQueryString()).params("localmod");
 
-	//load local_mods
-	for (var i=0, mn; modname= g_data.local_mods_to_load[i]; i++) {
+	//load local_mods.
+	//build a new list rather than splicing the one we are iterating over
+	var found = [];
+	for (var i=0; i < g_data.local_mods_to_load.length; i++) {
+		var modname = g_data.local_mods_to_load[i];
 		var mod = LocalDataStore.get(modname);
-		if (mod) {
-			g_data.local_data[modname] = mod;
 
-			//remove duplicate (server version)
-			if (Utils.inArray(modname, g_data.server_mods_to_load))
-				Utils.weedArray(modname, g_data.server_mods_to_load);
-		} else {
-			g_data.local_mods_to_load.splice(i,1);
-			i--;
-
+		if (!mod) {
 			Utils.error('Local mod not found: '+modname);
+			continue;
 		}
+		g_data.local_data[modname] = mod;
+		found.push(modname);
+
+		//remove duplicate (server version)
+		if (Utils.inArray(modname, g_data.server_mods_to_load))
+			Utils.weedArray(modname, g_data.server_mods_to_load);
 	}
+	g_data.local_mods_to_load = found;
 	DMI.continueLoading();
 }
 
@@ -183,9 +165,11 @@ function selectMods( g_data ) {
 		if (DMI.Utils.inArray(mod, g_data.server_mods_to_load))
 			checked = ' checked="checked"';
 
+		//mod filenames come from the server directory listing - escape them
+		var emod = Utils.escapeHtml(mod);
 		html += '<div class="selectable-mod">';
-		html += '<label for="select-'+mod+'"><input name="mod" id="select-'+mod+'" value="'+mod+'" type="checkbox" '+checked+'>';
-		html += 	mod+'</label>';
+		html += '<label for="select-'+emod+'"><input name="mod" id="select-'+emod+'" value="'+emod+'" type="checkbox" '+checked+'>';
+		html += 	emod+'</label>';
 		html += '</div>'
 	}
 	html+='</div>';
@@ -222,8 +206,10 @@ function selectMods( g_data ) {
 				if (e && e.target && e.target.result) {
 					g_data.upload_mods_to_load.push(f.name);
 					g_data.upload_data[f.name] = e.target.result;
-					$('ul#custom-mod-list li[title=\''+f.name+'\']').remove();
-					$('ul#custom-mod-list').show().append('<li title="'+f.name+'">'+f.name+'</li>');
+					//match on the property, not a built selector string (filenames
+					//can contain quotes and are not ours to trust)
+					$('ul#custom-mod-list li').filter(function(){ return $(this).attr('title') == f.name; }).remove();
+					$('ul#custom-mod-list').show().append($('<li>').attr('title', f.name).text(f.name));
 					$('#clear-custom-mods-btn').css('visibility', 'visible');
 				} else {
 					DMI.Utils.error('Error reading local file: '+f.name);
@@ -296,7 +282,10 @@ function selectMods( g_data ) {
 
 	//show local mods
 	for (var i=0, m; m=g_data.local_mods_to_load[i]; i++) {
-		$('ul#custom-mod-list').show().append('<li title="'+m+'">'+m+' <span style="font-weight:normal;color:black;font-style:italic;">&nbsp;(stored copy)</span></li>');
+		$('ul#custom-mod-list').show().append(
+			$('<li>').attr('title', m).text(m)
+			.append(' <span style="font-weight:normal;color:black;font-style:italic;">&nbsp;(stored copy)</span>')
+		);
 		$('#clear-custom-mods-btn').css('visibility', 'visible');
 	}
 
@@ -440,7 +429,6 @@ function downloadData( g_data ) {
            'gamedata/BaseU.csv'+versionCode,
            'gamedata/MagicSites.csv'+versionCode,
            'gamedata/Mercenary.csv'+versionCode,
-           'gamedata/events.csv'+versionCode,
            'gamedata/nations.csv'+versionCode,
            'gamedata/armors.csv'+versionCode,
            'gamedata/protections_by_armor.csv'+versionCode,
@@ -484,8 +472,11 @@ function downloadData( g_data ) {
 		   'gamedata/nametypes.csv'+versionCode
 	];
 
-	if (location.search.indexOf('loadEvents=1') != -1) {
-		filestoload.concat( 'gamedata/events.csv'+versionCode );
+	//events.csv is 700KB - two thirds of a megabyte we only need on the event page.
+	//(this used to be in the list unconditionally, and the guard below was a no-op:
+	//Array.concat returns a new array, it does not append in place.)
+	if (DMI.Options['Load events']) {
+		filestoload.push( 'gamedata/events.csv'+versionCode );
 	}
 
 	var onerror = function( emsg, details ) {
@@ -598,7 +589,7 @@ function parseData( g_data ) {
 			modctx.mercdata = parseTextToTable(data);
 			modctx.merclookup = createLookup(modctx.mercdata, 'id', 'name');
 
-			if (location.search.indexOf('loadEvents=1') != -1) {
+			if (DMI.Options['Load events']) {
 				var data = g_data.server_data['gamedata/events.csv'+versionCode];
 				if (!data) throw(DMI.Utils.error('ERROR LOADING: gamedata/events.csv'));
 				modctx.eventdata = parseTextToTable(data);
@@ -772,17 +763,27 @@ function parseData( g_data ) {
 
 			modctx.school_lookup = DMI.modconstants[15];
 
+			//runs fn, and with ?profile=1 logs how long it took. the data prep
+			//phases are the bulk of startup cost, so make them measurable.
+			function phase(label, fn) {
+				if (!DMI.Options['Profile']) return fn();
+				var t0 = (window.performance || Date).now();
+				var r = fn();
+				console.log('  ' + label + ': ' + ((window.performance || Date).now() - t0).toFixed(1) + 'ms');
+				return r;
+			}
+
 			//before applying mod (order is important!)
-			DMI.MWpn.prepareData_PreMod();
-			DMI.MArmor.prepareData_PreMod();
-			DMI.MItem.prepareData_PreMod();
-			DMI.MUnit.prepareData_PreMod();
-			DMI.MSpell.prepareData_PreMod();
-			DMI.MSite.prepareData_PreMod();
-			DMI.MNation.prepareData_PreMod();
-			DMI.MMerc.prepareData_PreMod();
-			if (location.search.indexOf('loadEvents=1') != -1) {
-				DMI.MEvent.prepareData_PreMod();
+			phase('MWpn pre',   DMI.MWpn.prepareData_PreMod);
+			phase('MArmor pre', DMI.MArmor.prepareData_PreMod);
+			phase('MItem pre',  DMI.MItem.prepareData_PreMod);
+			phase('MUnit pre',  DMI.MUnit.prepareData_PreMod);
+			phase('MSpell pre', DMI.MSpell.prepareData_PreMod);
+			phase('MSite pre',  DMI.MSite.prepareData_PreMod);
+			phase('MNation pre',DMI.MNation.prepareData_PreMod);
+			phase('MMerc pre',  DMI.MMerc.prepareData_PreMod);
+			if (DMI.Options['Load events']) {
+				phase('MEvent pre', DMI.MEvent.prepareData_PreMod);
 			}
 
 			//parse the mods
@@ -818,16 +819,16 @@ function parseData( g_data ) {
 			g_data.upload_data = null;
 
 			//after applying mod (order is important!)
-			DMI.MWpn.prepareData_PostMod();
-			DMI.MArmor.prepareData_PostMod();
-			DMI.MItem.prepareData_PostMod();
-			DMI.MUnit.prepareData_PostMod();
-			DMI.MSpell.prepareData_PostMod();
-			DMI.MNation.prepareData_PostMod();
-			DMI.MSite.prepareData_PostMod();
-			DMI.MMerc.prepareData_PostMod();
-			if (location.search.indexOf('loadEvents=1') != -1) {
-				DMI.MEvent.prepareData_PostMod();
+			phase('MWpn post',   DMI.MWpn.prepareData_PostMod);
+			phase('MArmor post', DMI.MArmor.prepareData_PostMod);
+			phase('MItem post',  DMI.MItem.prepareData_PostMod);
+			phase('MUnit post',  DMI.MUnit.prepareData_PostMod);
+			phase('MSpell post', DMI.MSpell.prepareData_PostMod);
+			phase('MNation post',DMI.MNation.prepareData_PostMod);
+			phase('MSite post',  DMI.MSite.prepareData_PostMod);
+			phase('MMerc post',  DMI.MMerc.prepareData_PostMod);
+			if (DMI.Options['Load events']) {
+				phase('MEvent post', DMI.MEvent.prepareData_PostMod);
 			}
 
 			//run callback

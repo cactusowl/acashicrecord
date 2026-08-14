@@ -20,14 +20,36 @@ MSpell.initSpell = function(o) {
 	o.notnations = [];
 }
 
+////////////////////////////////////////////////////////////////////////////
+// spell attribute lookup
+//
+// attributes_by_spell is a flat (spell_number, attribute, raw_value) table of
+// ~1500 rows that used to be rescanned from the top for each of the ~1500
+// spells, several times over. it is static gamedata, so index it by spell once.
+// every spell_number in the shipped data is a plain integer, so keying on the
+// numeric value matches the loose == the original comparisons used.
+////////////////////////////////////////////////////////////////////////////
+var _spellAttrIndex = null;
+
+function spellAttrs(id) {
+	if (!_spellAttrIndex) {
+		_spellAttrIndex = {};
+		for (var i=0, r; r=(modctx.attributes_by_spell||[])[i]; i++) {
+			var k = Number(r.spell_number);
+			if (isNaN(k)) continue;
+			(_spellAttrIndex[k] || (_spellAttrIndex[k] = [])).push(r);
+		}
+	}
+	return _spellAttrIndex[Number(id)] || [];
+}
+
 MSpell.nationList = function (o) {
 	o.nations = [];
 
-	for (var oi=0, attr; attr = modctx.attributes_by_spell[oi];  oi++) {
-		if (attr.spell_number == o.id) {
-			if (attr.attribute == "278") {
-				o.nations.push(parseInt(attr.raw_value));
-			}
+	var attrs = spellAttrs(o.id);
+	for (var oi=0, attr; attr = attrs[oi];  oi++) {
+		if (attr.attribute == "278") {
+			o.nations.push(parseInt(attr.raw_value));
 		}
 	}
 
@@ -77,20 +99,19 @@ MSpell.prepareData_PreMod = function() {
 
 MSpell.prepareData_PostMod = function() {
 	for (var oi=0, o;  o= modctx.spelldata[oi];  oi++) {
-		for (var ai=0, attr; attr = modctx.attributes_by_spell[ai];  ai++) {
-			if (attr.spell_number == o.id) {
-				if (attr.attribute == "602") {
-					for (var ni=0, n;  n= modctx.nationdata[ni];  ni++) {
-						var nation = modctx.nationlookup[n.id];
-						if (Utils.inArray(attr.raw_value, nation.homerealm)) {
-							o.nations.push(parseInt(n.id));
-						}
+		var sattrs = spellAttrs(o.id);
+		for (var ai=0, attr; attr = sattrs[ai];  ai++) {
+			if (attr.attribute == "602") {
+				for (var ni=0, n;  n= modctx.nationdata[ni];  ni++) {
+					var nation = modctx.nationlookup[n.id];
+					if (Utils.inArray(attr.raw_value, nation.homerealm)) {
+						o.nations.push(parseInt(n.id));
 					}
 				}
-				// Geo extra effect
-				if (attr.attribute == "724") {
-					o.nextspell = parseInt(o.id)+1;
-				}
+			}
+			// Geo extra effect
+			if (attr.attribute == "724") {
+				o.nextspell = parseInt(o.id)+1;
 			}
 		}
 
@@ -347,33 +368,32 @@ MSpell.prepareData_PostMod = function() {
 		}
 		
 		// Attributes
-		for (var oj=0, attr; attr = modctx.attributes_by_spell[oj];  oj++) {
-			if (attr.spell_number == o.id) {
-				//var attribute = modctx.attributes_lookup[parseInt(attr.attribute_record_id)];
-				if (attr.attribute == "700") {
-					o.provrange = attr.raw_value;
-				}
-				if (attr.attribute == "787") {
-					o.casttime = attr.raw_value;
-				}
-				if (attr.attribute == "1700" ||
-				    attr.attribute == "1701") {
-					var u = modctx.unitlookup[attr.raw_value];
+		var pattrs = spellAttrs(o.id);
+		for (var oj=0, attr; attr = pattrs[oj];  oj++) {
+			//var attribute = modctx.attributes_lookup[parseInt(attr.attribute_record_id)];
+			if (attr.attribute == "700") {
+				o.provrange = attr.raw_value;
+			}
+			if (attr.attribute == "787") {
+				o.casttime = attr.raw_value;
+			}
+			if (attr.attribute == "1700" ||
+			    attr.attribute == "1701") {
+				var u = modctx.unitlookup[attr.raw_value];
 
-					//add to list of summoned units (to be attached to nations later)
-					o.summonsunits = o.summonsunits || [];
-					o.summonsunits.push(u);
+				//add to list of summoned units (to be attached to nations later)
+				o.summonsunits = o.summonsunits || [];
+				o.summonsunits.push(u);
 
-					//attach spell to unit
-					u.summonedby = u.summonedby || [];
-					u.summonedby.push( o );
-					if (_effects.effect_number == "1" ||
+				//attach spell to unit
+				u.summonedby = u.summonedby || [];
+				u.summonedby.push( o );
+				if (_effects.effect_number == "1" ||
    					    _effects.effect_number == "37") {
-						u.typechar = 'unit (Summon)';
-						u.sorttype = MUnit.unitSortableTypes[u.typechar];
-					} else {
-						u.typechar = 'cmdr (Summon)';
-					}
+					u.typechar = 'unit (Summon)';
+					u.sorttype = MUnit.unitSortableTypes[u.typechar];
+				} else {
+					u.typechar = 'cmdr (Summon)';
 				}
 			}
 		}
@@ -627,6 +647,7 @@ MSpell.CGrid = DMI.Utils.Class( DMI.CGrid, function() {
 			mlevels: {},
 			mpaths: ''
 		};
+		args.customjs = this.getCustomJs(args.properties);
 		args.properties = Utils.propertiesWithKeys(args.properties);
 
 		if ($.isEmptyObject(args.schools)) delete args.schools;
@@ -887,7 +908,7 @@ MSpell.renderOverlay = function(o) {
 	h+='	<div class="overlay-header" title="spell id:'+o.id+'"> ';
 	h+=' 		<input class="overlay-pin" type="image" src="images/PinPageTrns.png" title="unpin" />';
 	h+='		<p style="float:right;">'+o.research+'</p>';
-	h+='		<div class="h2replace">'+o.name+'</div> ';
+	h+='		<div class="h2replace">'+Utils.escapeHtml(o.name)+'</div> ';
 
 	var nref = DMI.MNation.nationUnitRefs(o.nations);
 	if (nref)
@@ -919,7 +940,7 @@ MSpell.renderOverlay = function(o) {
 	h+='		<div class="overlay-descr pane-extension '+uid+'"></div>';
 
 	if (o.descr)
-		Utils.insertContent( '<p>'+o.descr+'</p>', 'div.'+uid );
+		Utils.insertContent( Utils.renderDescr(o.descr), 'div.'+uid );
 	else {
 		var url = descrpath + Utils.descrFilename(o.name);
 		Utils.loadContent( url, 'div.'+uid );
@@ -996,47 +1017,46 @@ MSpell.renderSpellTable = function(o, original_effect) {
 		h+=			renderEffect(o, effects);
 
 		// Attributes
-		for (var oi=0, attr; attr = modctx.attributes_by_spell[oi];  oi++) {
-			if (attr.spell_number == o.id) {
-				if (attr.attribute != "278" &&
-						attr.attribute != "700" &&
-						attr.attribute != "787") {
-					var specflags = modctx.attribute_keys_lookup[attr.attribute].name;
+		var rattrs = spellAttrs(o.id);
+		for (var oj=0, attr; attr = rattrs[oj];  oj++) {
+			if (attr.attribute != "278" &&
+					attr.attribute != "700" &&
+					attr.attribute != "787") {
+				var specflags = modctx.attribute_keys_lookup[attr.attribute].name;
 
-					var val;
-					if (attr.attribute == '701') {
-						val = Utils.renderFlags(MSpell.bitfieldValues(attr.raw_value, modctx.map_terrain_types_lookup), 1);
-					} else if (attr.attribute == '702') {
-						val = Utils.renderFlags(MSpell.bitfieldValues(attr.raw_value, modctx.map_terrain_types_lookup), 1);
-					} else if (attr.attribute == '711') {
-						val = Utils.siteRef(attr.raw_value);
-					} else if (attr.attribute == '719') {
-						if (modctx.unit_effects_lookup[attr.raw_value]) {
-							val = modctx.unit_effects_lookup[attr.raw_value].name
-						} else {
-							val = attr.raw_value;
-						}
-					} else if (attr.attribute == '750') {
-						var special = {'-1': 'Non-specialized', 0: 'Fire', 1: 'Air', 2:'Water', 3:'Earth', 4:'Astral', 5:'Death', 6:'Nature', 7:'Glamour', 8:'Blood'};
-						val = special[attr.raw_value];				
-					} else if (attr.attribute == "703" || attr.attribute == "704" || attr.attribute == "724") {
-						val = Utils.renderFlags(MSpell.bitfieldValues(attr.raw_value, modctx.map_terrain_types_lookup));
-					} else if (attr.attribute == '731') {
-						val = Utils.unitRef(attr.raw_value);
-					} else if (attr.attribute == '746') {
-						val = modctx.enchantments_lookup[attr.raw_value].name;
-					} else if (attr.attribute == '790') {
-						val = Utils.unitRef(attr.raw_value);
-					} else if (attr.attribute == '1700') {
-						val = Utils.unitRef(attr.raw_value);
-					} else if (attr.attribute == '1701') {
-						val = Utils.unitRef(attr.raw_value);
+				var val;
+				if (attr.attribute == '701') {
+					val = Utils.renderFlags(MSpell.bitfieldValues(attr.raw_value, modctx.map_terrain_types_lookup), 1);
+				} else if (attr.attribute == '702') {
+					val = Utils.renderFlags(MSpell.bitfieldValues(attr.raw_value, modctx.map_terrain_types_lookup), 1);
+				} else if (attr.attribute == '711') {
+					val = Utils.siteRef(attr.raw_value);
+				} else if (attr.attribute == '719') {
+					if (modctx.unit_effects_lookup[attr.raw_value]) {
+						val = modctx.unit_effects_lookup[attr.raw_value].name
 					} else {
 						val = attr.raw_value;
 					}
-
-					h+= '<tr class="'+attr.attribute+'"><th>'+modctx.attribute_keys_lookup[attr.attribute].name.replace(/{(.*?)}|<|>/g, "")+':</th><td>'+val+'</td></tr>'
+				} else if (attr.attribute == '750') {
+					var special = {'-1': 'Non-specialized', 0: 'Fire', 1: 'Air', 2:'Water', 3:'Earth', 4:'Astral', 5:'Death', 6:'Nature', 7:'Glamour', 8:'Blood'};
+					val = special[attr.raw_value];				
+				} else if (attr.attribute == "703" || attr.attribute == "704" || attr.attribute == "724") {
+					val = Utils.renderFlags(MSpell.bitfieldValues(attr.raw_value, modctx.map_terrain_types_lookup));
+				} else if (attr.attribute == '731') {
+					val = Utils.unitRef(attr.raw_value);
+				} else if (attr.attribute == '746') {
+					val = modctx.enchantments_lookup[attr.raw_value].name;
+				} else if (attr.attribute == '790') {
+					val = Utils.unitRef(attr.raw_value);
+				} else if (attr.attribute == '1700') {
+					val = Utils.unitRef(attr.raw_value);
+				} else if (attr.attribute == '1701') {
+					val = Utils.unitRef(attr.raw_value);
+				} else {
+					val = attr.raw_value;
 				}
+
+				h+= '<tr class="'+attr.attribute+'"><th>'+modctx.attribute_keys_lookup[attr.attribute].name.replace(/{(.*?)}|<|>/g, "")+':</th><td>'+val+'</td></tr>'
 			}
 		}
 
@@ -1098,11 +1118,16 @@ function renderEffect(o, effects) {
 	return '<tr><th width="10px">'+modctx.effects_info_lookup[effects.effect_number].name.replace(/{(.*?)}|(\(Type.*?\))|(\(\?\))/g, "").trim()+':</th><td>'+res+'</td></tr>'
 }
 
+// NB: modifiers_mask is a 64-bit field held as a string. Testing it with
+// javascript's & operator silently truncates to 32 bits (after an already lossy
+// conversion to a double), which corrupts the low bits of any mask above 2^53 -
+// 83 rows in the shipped gamedata. Utils.maskTest does the comparison exactly.
+
 MSpell.worksUnderwater = function(spell) {
 	var effects = MSpell.getEffect(spell);
 	if (effects) {
-		if ((effects.modifiers_mask & 8388608) ||
-			(effects.modifiers_mask & 33554432)) {
+		if (Utils.maskTest(effects.modifiers_mask, 8388608) ||
+			Utils.maskTest(effects.modifiers_mask, 33554432)) {
 			return true;
 		}
 	}
@@ -1112,7 +1137,7 @@ MSpell.worksUnderwater = function(spell) {
 MSpell.worksOnDryLand = function(spell) {
 	var effects = MSpell.getEffect(spell);
 	if (effects) {
-		if (!(effects.modifiers_mask & 33554432)) {
+		if (!Utils.maskTest(effects.modifiers_mask, 33554432)) {
 			return true;
 		}
 	}
@@ -1122,28 +1147,12 @@ MSpell.worksOnDryLand = function(spell) {
 MSpell.extraEffect = function(spell) {
 	var effects = MSpell.getEffect(spell);
 	if (effects) {
-		if ((MSpell.BitwiseAndLarge(effects.modifiers_mask,576460752303423488)) ||
-			(MSpell.BitwiseAndLarge(effects.modifiers_mask, 1152921504606846976))) {
+		if (Utils.maskTest(effects.modifiers_mask, '576460752303423488') ||
+			Utils.maskTest(effects.modifiers_mask, '1152921504606846976')) {
 			return true;
 		}
 	}
 	return false;
-}
-
-MSpell.BitwiseAndLarge = function(val1, val2) {
-    var shift = 0, result = 0;
-    var mask = ~((~0) << 30); // Gives us a bit mask like 01111..1 (30 ones)
-    var divisor = 1 << 30; // To work with the bit mask, we need to clear bits at a time
-    while( (val1 != 0) && (val2 != 0) ) {
-        var rs = (mask & val1) & (mask & val2);
-        val1 = Math.floor(val1 / divisor); // val1 >>> 30
-        val2 = Math.floor(val2 / divisor); // val2 >>> 30
-        for(var i = shift++; i--;) {
-            rs *= divisor; // rs << 30
-        }
-        result += rs;
-    }
-    return result;
 }
 
 MSpell.getEffect = function(spell) {

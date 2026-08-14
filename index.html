@@ -1,16 +1,12 @@
 <!DOCTYPE html>
  <html lang="en">
  <head>
-   <!-- Global site tag (gtag.js) - Google Analytics -->
-   <script async src="https://www.googletagmanager.com/gtag/js?id=UA-51174963-1"></script>
-   <script>
-     window.dataLayer = window.dataLayer || [];
-     function gtag(){dataLayer.push(arguments);}
-     gtag('js', new Date());
-
-     gtag('config', 'UA-51174963-1');
-   </script>
+   <!-- NB: the Google Analytics tag that used to sit here was a Universal
+        Analytics property (UA-51174963-1). Universal Analytics stopped
+        collecting data in July 2023, so it was a third-party request on every
+        page load that recorded nothing. Removed. -->
    <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1">
    <title>Dom6 Mod Inspector</title>
 
    <!-- ?v=30 -->
@@ -21,6 +17,7 @@
 	<link rel="stylesheet" type="text/css" href="scripts/slickgrid/examples/examples.css" />
 	<link rel="stylesheet" type="text/css" href="scripts/master.css?v=30"  />
 	<link rel="stylesheet" type="text/css" href="scripts/select2/select2.min.css"  />
+	<link rel="stylesheet" type="text/css" href="scripts/nationview.css?v=30"  />
 	
 </head>
 <body>
@@ -56,6 +53,8 @@
 	<script type="text/javascript" src="scripts/DMI/MSite.js?v=30"></script>
 	<script type="text/javascript" src="scripts/DMI/MMerc.js?v=30"></script>
 	<script type="text/javascript" src="scripts/DMI/MEvent.js?v=30"></script>
+	<script type="text/javascript" src="scripts/DMI/abilityicons.js?v=30"></script>
+	<script type="text/javascript" src="scripts/DMI/MNationView.js?v=30"></script>
 	<script type="text/javascript" src="scripts/DMI/bitfields.js?v=30"></script>
 	
 	<script type="text/javascript" src="scripts/main.js?v=30"></script>
@@ -136,6 +135,7 @@
 		</div>
        <!-- PAGE TABS -->
 		<div id="page-tabs" class="primary-panel">
+			<button id="nation-page-button"  class="page-button" value="nation">Nation</button>
 			<button id="item-page-button"  class="page-button" value="items">Item</button>
 			<button id="spell-page-button" class="page-button" value="spells">Spell</button>
 			<button id="unit-page-button"  class="page-button" value="units">Unit</button>
@@ -909,6 +909,13 @@
 	<!-- /SHARED -->
 	
 	<!-- PAGE CONTAINERS -->
+	<!-- the nation page builds its own contents (scripts/DMI/MNationView.js).
+	     the hidden input carries the chosen nation into the permalink/cookie
+	     via the same saveState mechanism the filter controls use. -->
+	<div id="nation-page" class="page" style="display:none;">
+		<input id="nv-nation" type="hidden" value="" />
+	</div>
+
 	<div id="spell-page" class="page" style="display:none;">
 		<div class="grid-container"></div>
 		<div class="static-overlay-container">

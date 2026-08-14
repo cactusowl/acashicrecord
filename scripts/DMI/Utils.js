@@ -31,15 +31,44 @@ Utils.wikiLink = function(name, subname, cssclass) {
 
 	return '<a href="'+url+'" title="'+title+'"'+cssclass+'>'+linktext+'</a>';
 }
-//strips non basic-alphanumeric chars (including spaces)
-Utils.descrFilename = function(name) {
-	return name.replace(/[^a-zA-Z1-9]/g,'')+'.txt';
+//escapes text for safe interpolation into an html string.
+//use this on ANY value that can originate from a mod file (names, descriptions,
+//mod command text, filenames). mod files are untrusted input.
+var _escapeMap = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+Utils.escapeHtml = function(str) {
+	if (str === null || str === undefined) return '';
+	return String(str).replace(/[&<>"']/g, function(c){ return _escapeMap[c]; });
+}
+//escapes text for use inside a single-quoted javascript string in an html attribute
+Utils.escapeJsString = function(str) {
+	if (str === null || str === undefined) return '';
+	return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[&<>"]/g, function(c){ return _escapeMap[c]; });
 }
 
-//display error on page
+//renders a plain-text description (mod supplied) as escaped paragraphs
+Utils.renderDescr = function(text) {
+	if (!text) return '';
+	return '<p>' + String(text).split('\n').map(Utils.escapeHtml).join('</p><p>') + '</p>';
+}
+
+//exact 64-bit mask test. the effect bitfields in gamedata exceed 2^53, so they
+//cannot be tested with javascript's & operator (which truncates to 32 bits after
+//an already-lossy conversion to a double). values arrive as strings; keep them
+//as strings all the way into BigInt.
+Utils.maskTest = function(mask, bits) {
+	if (mask === null || mask === undefined || mask === '') return false;
+	try {
+		return (BigInt(String(mask).trim()) & BigInt(bits)) !== 0n;
+	}
+	catch(e) { return false; }
+}
+
+//display error on page.
+//messages routinely contain mod names and file paths taken from the url or from
+//a mod file, so this escapes - pass plain text, not html.
 Utils.error = function(msg) {
 	$('#primary-details').prepend(
-		$('<div class="errormsg">').html(msg)
+		$('<div class="errormsg">').text(msg)
 	);
 	return msg;
 }
@@ -72,15 +101,6 @@ Utils.arrayDisect = function(arr, disectwith) {
 		for (var i=arr.length-1; i>=0; i--) {
 			if (arr[i] == weed) arr.splice(i,1);
 		}
-	}
-}
-Utils.arrayIntersect = function(arr, intersectwith) {
-	outerloop:
-	for (var gem, di=0; gem=intersectwith[di]; di++) {
-		for (var i=arr.length-1; i>=0; i--) {
-			if (arr[i] == gem) continue outerloop;
-		}
-		arr.splice(i,1)
 	}
 }
 Utils.arrayUnique = function(arr) {
@@ -133,7 +153,7 @@ Utils.keyListToTable = function(parent, basekey, maxnum) {
 
 //merges values from one object onto another
 Utils.merge = function(o, vals) {
-	for (k in vals) o[k] = vals[k];
+	for (var k in vals) o[k] = vals[k];
 	return o;
 }
 
@@ -264,16 +284,18 @@ Utils.renderDetailsRows = function(o, displayorder, aliases, formats, cssClass) 
 		if (!v) continue;
 
 		if (formats[k] && typeof(formats[k])=='function')
-			v = formats[k](v,o);
+			v = formats[k](v,o);				//formatter returns html
 		else if ((k in formats) && formats[k][v])
-			v = formats[k][v];
+			v = formats[k][v];					//lookup table of html snippets
+		else
+			v = Utils.escapeHtml(v);			//raw value straight from csv/mod - escape it
 
 		var ak = aliases[k] || k;
 		//if (DMI.Options['Show database keys'])
 		ak+= '<span class="internal-inline"> ['+displayorder[i]+']</span>';
 
 		if (v!='0') {
-			var t = (o.titles && o.titles[k]) ?  (' title="'+o.titles[k]+'"') : '';
+			var t = (o.titles && o.titles[k]) ?  (' title="'+Utils.escapeHtml(o.titles[k])+'"') : '';
 			h+=' <tr class="'+k+' '+cssClass+'" '+t+'> <th>'+ak+': </th> <td>'+v+'</td> </tr> ';
 		}
 	}
@@ -289,16 +311,18 @@ Utils.renderDetailsRows2 = function(o, displayorder, aliases, formats, cssClass)
 		if (!v) continue;
 
 		if (formats[k] && typeof(formats[k])=='function')
-			v = formats[k](v,o);
+			v = formats[k](v,o);				//formatter returns html
 		else if ((k in formats) && formats[k][v])
-			v = formats[k][v];
+			v = formats[k][v];					//lookup table of html snippets
+		else
+			v = Utils.escapeHtml(v);			//raw value straight from csv/mod - escape it
 
 		var ak = aliases[k] || k;
 		//if (DMI.Options['Show database keys'])
 		//ak+= '<span class="internal-inline"> ['+displayorder[i]+']</span>';
 
 		if (v!='0') {
-			var t = (o.titles && o.titles[k]) ?  (' title="'+o.titles[k]+'"') : '';
+			var t = (o.titles && o.titles[k]) ?  (' title="'+Utils.escapeHtml(o.titles[k])+'"') : '';
 			h+=' <tr class="'+k+' '+cssClass+'" '+t+'> <th>'+ak+': </th> <td>'+v+'</td> </tr> ';
 			h+=' <tr> <th><span class="internal-inline"> ['+displayorder[i]+']</span></th> </tr> ';
 		}
@@ -473,13 +497,15 @@ Utils.planesRef = function(name) {
 
 Utils.unitOfTypeRef = function(id, utype) {
 	var o = DMI.modctx.unitlookup[id];
-	if (!o) return v;
+	//unknown id (eg: a mod referencing a unit it never defines) - degrade to plain text
+	if (!o) return Utils.escapeHtml(id);
 	var suffix = '<span class="modding-inline refid">#'+o.id+'&nbsp;</span>';
 	return suffix + Utils.ref(utype+' '+o.id, o.linkname);
 }
 Utils.rndMagicRef = function(id, text) {
 	var o = DMI.modctx.unitlookup[id];
-	if (!o) return v;
+	//unknown id - degrade to the text we were asked to link
+	if (!o) return Utils.escapeHtml(text);
 	return Utils.ref('rndmagic '+o.id, text);
 }
 

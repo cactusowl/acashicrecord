@@ -1,4 +1,11 @@
-# Dominions 6 Mod Inspector
+# Dominions 6 Mod Inspector - Acashic Record extension
+
+This is an extension to the Mod Inspector written by larzm42 to make it more mobile-friendly and tinker with adding some features.
+
+The original README is below:
+
+---
+
 An online reference for Illwinter's strategy game [Dominions 6](http://www.illwinter.com/dom6). This tool lists all of the Units, Spells, Items, Sites, Mercenaries, Events, Weapons and Armour in the game. All of the relevant statistics for each of these items is also listed. It's also possible to load game mods to see how they effects these objects.
 
 ### Documentation
@@ -78,3 +85,5 @@ Post feedback [here](https://steamcommunity.com/app/2511500/discussions/0/413268
 * dashleysmith - coding & design of Dominions 3 Mod Inspector
 * Illwinter - they made Dominions 6!
 * noblesse_oblige - creating data dumps from the Dominions executable
+
+# acashicrecord

@@ -11,9 +11,11 @@ PM.option_drag_anywhere = false;
 /////////////////////////////////////////////////////////////
 
 //ref must be a string that explains how to render this pane (eg: object id)
+//`text` may be a mod-supplied name, so escape it unless it is already html
 PM.refLink = function(ref, text) {
-	var reftag =  '<input value="'+ref+'" type="hidden" />';
-	return '<a class="ref" style="cursor:pointer;">'+reftag+text+'</a>';
+	var esc = (window.DMI && DMI.Utils && DMI.Utils.escapeHtml) || function(s){ return s; };
+	var reftag =  '<input value="'+esc(ref)+'" type="hidden" />';
+	return '<a class="ref" style="cursor:pointer;">'+reftag+esc(text)+'</a>';
 }
 
 //must be implemented externally, should return html.
