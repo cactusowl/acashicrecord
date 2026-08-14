@@ -89,6 +89,18 @@ Format.AbilityIcon = function(name, title) {
 	return '<span class="abilityicon '+name+'" title="'+title+'">&nbsp;</span>';
 }
 
+//a sprite that swaps between two images when clicked/tapped.
+//urls may originate from a mod file, so they are escaped into data attributes
+//rather than interpolated into inline javascript. handler lives in main.js.
+Format.SpriteToggle = function(url1, url2, title) {
+	var esc = DMI.Utils.escapeHtml;
+	return '<img class="sprite-toggle" style="float:right; clear:right; vertical-align:top; margin-right:25px; cursor:pointer"'
+		+ ' title="'+esc(title)+'"'
+		+ ' src="'+esc(url1)+'"'
+		+ ' data-spr1="'+esc(url1)+'"'
+		+ ' data-spr2="'+esc(url2)+'" />';
+}
+
 //simple functions for formatting values
 Format.Percent = function(v) {
 	v = String(v);

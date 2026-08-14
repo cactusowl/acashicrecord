@@ -3029,15 +3029,19 @@ modctx.parseMod = function(str, modnum, modname) {
 				var types =  ['unit', 'spell', 'wpn', 'item', 'armor', 'nation', 'site'];
 				var ignorecmds = { selectmonster:1, selectspell:1, selectweapon:1, selectitem:1, selectarmor:1, selectnation:1 }
 
+				//mod file text is untrusted input - escape it before it becomes html
+				var esc = DMI.Utils.escapeHtml;
+
 				for (var j=0, type; type=types[j]; j++) {
 					if (modctx[type] && !ignorecmds[cmd]) {
-						if (emsg)
-							modctx[type].modded += emsg.split('\n')[0] +'<br />!! ';
-
+						//NB: initialise before appending, or the first append reads undefined
 						if (!modctx[type].modded)
 							modctx[type].modded = "";
 
-						modctx[type].modded += modnum + ':' + linenum +'&nbsp;&nbsp;'+cstr+'<br />';
+						if (emsg)
+							modctx[type].modded += esc(emsg.split('\n')[0]) +'<br />!! ';
+
+						modctx[type].modded += modnum + ':' + linenum +'&nbsp;&nbsp;'+esc(cstr)+'<br />';
 						//modctx.item.cmds += JSON.stringify(args)+'<br />';
 					}
 				}

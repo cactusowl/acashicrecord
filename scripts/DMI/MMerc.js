@@ -152,7 +152,7 @@ MMerc.renderOverlay = function(o) {
 
 	//header
 	h+='	<div class="overlay-header" title="merc id: '+o.id+'"> ';
-	h+='		<div class="h2replace">'+o.name+'</div> ';
+	h+='		<div class="h2replace">'+Utils.escapeHtml(o.name)+'</div> ';
 
 	//mid
 	h+='	</div>';

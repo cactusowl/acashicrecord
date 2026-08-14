@@ -12,6 +12,54 @@ var modctx = DMI.modctx;
 var modconstants = DMI.modconstants;
 
 
+////////////////////////////////////////////////////////////////////////////
+// nation lookups
+//
+// the *_by_nation tables are flat lists of (nation_number, ...) rows. building
+// the nation list used to rescan every one of them from the top for each of the
+// 135 nations - attributes_by_nation alone is 5256 rows, walked several times
+// per nation. these tables are static gamedata (no mod command writes to them),
+// so they are indexed by nation id once, on first use.
+////////////////////////////////////////////////////////////////////////////
+
+var _nationIndex = {};
+
+//discards the cached indexes (call before rebuilding data)
+MNation.clearIndexes = function() { _nationIndex = {}; }
+
+//rows of modctx[tableName] belonging to nation `id`
+function nationRows(tableName, id) {
+	var idx = _nationIndex[tableName];
+	if (!idx) {
+		idx = _nationIndex[tableName] = {};
+		var table = modctx[tableName] || [];
+		for (var i=0, r; r=table[i]; i++) {
+			var k = parseInt(r.nation_number);
+			if (isNaN(k)) continue;
+			(idx[k] || (idx[k] = [])).push(r);
+		}
+	}
+	return idx[parseInt(id)] || [];
+}
+
+//rows of modctx.realms whose realm is one of `realms`.
+//walks the realms table in its own order, and repeats a row once per duplicate
+//entry in `realms`, so the result matches the original nested-loop version.
+function realmMonsters(realms) {
+	var count = {};
+	for (var i=0; i<realms.length; i++) {
+		var k = parseInt(realms[i]);
+		count[k] = (count[k] || 0) + 1;
+	}
+	var out = [];
+	for (var i=0, r; r=(modctx.realms||[])[i]; i++) {
+		var n = count[parseInt(r.realm)] || 0;
+		for (var j=0; j<n; j++) out.push(r);
+	}
+	return out;
+}
+
+
 MNation.initNation = function(o) {
 	o.foreignunits = [];
 	o.forestrec = [];
@@ -50,6 +98,7 @@ MNation.initNation = function(o) {
 	o.delgod = [];
 }
 MNation.prepareData_PreMod = function() {
+	MNation.clearIndexes();
 	for (var oi=0, o;  o= modctx.nationdata[oi];  oi++) {
 
 		o.pretenders = [];
@@ -84,12 +133,11 @@ MNation.prepareData_PreMod = function() {
 		o.delgod = [];
 		// Get realms of nation
 		var realms = [];
-		for (var oj=0, attr; attr = modctx.attributes_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				//var attribute = modctx.attributes_lookup[parseInt(attr.attribute_record_id)];
-				if (attr.attribute == "289") {
-					realms.push(attr.raw_value);
-				}
+		var attrs = nationRows('attributes_by_nation', o.id);
+		for (var oj=0, attr; attr = attrs[oj];  oj++) {
+			//var attribute = modctx.attributes_lookup[parseInt(attr.attribute_record_id)];
+			if (attr.attribute == "289") {
+				realms.push(attr.raw_value);
 			}
 		}
 		o.homerealm = realms;
@@ -128,11 +176,10 @@ MNation.prepareData_PostMod = function() {
 
 		// Get realms of nation
 		var realms = [];
-		for (var oj=0, attr; attr = modctx.attributes_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				if (attr.attribute == "289") {
-					realms.push(attr.raw_value);
-				}
+		var attrs = nationRows('attributes_by_nation', o.id);
+		for (var oj=0, attr; attr = attrs[oj];  oj++) {
+			if (attr.attribute == "289") {
+				realms.push(attr.raw_value);
 			}
 		}
 		if (o.homerealm) {
@@ -140,22 +187,18 @@ MNation.prepareData_PostMod = function() {
 		}
 
 		// get monsters in realm
-		for (var oj=0, attr; attr = modctx.realms[oj];  oj++) {
-			for (var ok=0, realm; realm = realms[ok]; ok++) {
-				if (parseInt(attr.realm) == parseInt(realm)) {
-					o.pretenders.push(attr.monster_number);
-				}
-			}
+		var realmrows = realmMonsters(realms);
+		for (var oj=0, attr; attr = realmrows[oj];  oj++) {
+			o.pretenders.push(attr.monster_number);
 		}
 		o.homerealm = realms;
 
 		// look for added pretenders
 		if (!o.cleargods) {
-			for (var oj=0, attr; attr = modctx.pretender_types_by_nation[oj];  oj++) {
-				if (parseInt(attr.nation_number) == o.id) {
-					if (attr.monster_number != 134) { // Why is royal guard marked as pretender?
-						o.pretenders.push(attr.monster_number);
-					}
+			var prets = nationRows('pretender_types_by_nation', o.id);
+			for (var oj=0, attr; attr = prets[oj];  oj++) {
+				if (attr.monster_number != 134) { // Why is royal guard marked as pretender?
+					o.pretenders.push(attr.monster_number);
 				}
 			}
 		}
@@ -164,13 +207,12 @@ MNation.prepareData_PostMod = function() {
 		}
 
 		// look for deleted pretenders
-		for (var oj=0, attr; attr = modctx.unpretender_types_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				for (var ok=0, pret; pret = o.pretenders[ok]; ok++) {
-					if (parseInt(pret) == parseInt(attr.monster_number)) {
-						o.pretenders.splice(ok, 1);
-						ok--;
-					}
+		var unprets = nationRows('unpretender_types_by_nation', o.id);
+		for (var oj=0, attr; attr = unprets[oj];  oj++) {
+			for (var ok=0, pret; pret = o.pretenders[ok]; ok++) {
+				if (parseInt(pret) == parseInt(attr.monster_number)) {
+					o.pretenders.splice(ok, 1);
+					ok--;
 				}
 			}
 		}
@@ -181,161 +223,154 @@ MNation.prepareData_PostMod = function() {
 		}
 
 		// look for commanders
-		for (var oj=0, attr; attr = modctx.fort_leader_types_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				o.commanders.push(attr.monster_number);
-			}
+		var rows = nationRows('fort_leader_types_by_nation', o.id);
+		for (var oj=0, attr; attr = rows[oj];  oj++) {
+			o.commanders.push(attr.monster_number);
 		}
 
 		// look for foreign commanders
-		for (var oj=0, attr; attr = modctx.nonfort_leader_types_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				o.foreigncommanders.push(attr.monster_number);
-			}
+		rows = nationRows('nonfort_leader_types_by_nation', o.id);
+		for (var oj=0, attr; attr = rows[oj];  oj++) {
+			o.foreigncommanders.push(attr.monster_number);
 		}
 
 		// look for units
-		for (var oj=0, attr; attr = modctx.fort_troop_types_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				o.units.push(attr.monster_number);
-			}
+		rows = nationRows('fort_troop_types_by_nation', o.id);
+		for (var oj=0, attr; attr = rows[oj];  oj++) {
+			o.units.push(attr.monster_number);
 		}
 
 		// look for foreign units
-		for (var oj=0, attr; attr = modctx.nonfort_troop_types_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				o.foreignunits.push(attr.monster_number);
-			}
+		rows = nationRows('nonfort_troop_types_by_nation', o.id);
+		for (var oj=0, attr; attr = rows[oj];  oj++) {
+			o.foreignunits.push(attr.monster_number);
 		}
 
 		// look for coast commanders
-		for (var oj=0, attr; attr = modctx.coast_leader_types_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				var unit = modctx.unitlookup[attr.monster_number];
-				if (unit.landshape) {
-					o.coastcom.push(parseInt(unit.landshape));
-				} else {
-					o.coastcom.push(attr.monster_number);
-				}
+		rows = nationRows('coast_leader_types_by_nation', o.id);
+		for (var oj=0, attr; attr = rows[oj];  oj++) {
+			var unit = modctx.unitlookup[attr.monster_number];
+			if (unit.landshape) {
+				o.coastcom.push(parseInt(unit.landshape));
+			} else {
+				o.coastcom.push(attr.monster_number);
 			}
 		}
 
 		// look for coast units
-		for (var oj=0, attr; attr = modctx.coast_troop_types_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				var unit = modctx.unitlookup[attr.monster_number];
-				if (unit.landshape) {
-					o.coastrec.push(parseInt(unit.landshape));
-				} else {
-					o.coastrec.push(attr.monster_number);
-				}
+		rows = nationRows('coast_troop_types_by_nation', o.id);
+		for (var oj=0, attr; attr = rows[oj];  oj++) {
+			var unit = modctx.unitlookup[attr.monster_number];
+			if (unit.landshape) {
+				o.coastrec.push(parseInt(unit.landshape));
+			} else {
+				o.coastrec.push(attr.monster_number);
 			}
 		}
 
-		for (var oj=0, attr; attr = modctx.attributes_by_nation[oj];  oj++) {
-			if (parseInt(attr.nation_number) == o.id) {
-				if (attr.attribute == "52" || attr.attribute == "100" || attr.attribute == "25") {
-					o.sites.push(parseInt(attr.raw_value));
+		attrs = nationRows('attributes_by_nation', o.id);
+		for (var oj=0, attr; attr = attrs[oj];  oj++) {
+			if (attr.attribute == "52" || attr.attribute == "100" || attr.attribute == "25") {
+				o.sites.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "631") {
+				o.futuresites.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "158" || attr.attribute == "159" || attr.attribute == "739") {   // 739 = coastal forts
+				var unit = modctx.unitlookup[attr.raw_value];
+				if (unit.landshape) {
+					o.coastcom.push(parseInt(unit.landshape));
+				} else {
+					o.coastcom.push(parseInt(attr.raw_value));
 				}
-				if (attr.attribute == "631") {
-					o.futuresites.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "160" || attr.attribute == "161" || attr.attribute == "162" || attr.attribute == "738") {  // 738 = coastal forts
+				var unit = modctx.unitlookup[attr.raw_value];
+				if (unit.landshape) {
+					o.coastrec.push(parseInt(unit.landshape));
+				} else {
+					o.coastrec.push(parseInt(attr.raw_value));
 				}
-				if (attr.attribute == "158" || attr.attribute == "159" || attr.attribute == "739") {   // 739 = coastal forts
-					var unit = modctx.unitlookup[attr.raw_value];
-					if (unit.landshape) {
-						o.coastcom.push(parseInt(unit.landshape));
-					} else {
-						o.coastcom.push(parseInt(attr.raw_value));
-					}
+			}
+			if (attr.attribute == "163") {
+				o.landcom.push(parseInt(attr.raw_value));
+			}
+			if (
+				attr.attribute == "186") {
+				var unit = modctx.unitlookup[attr.raw_value];
+				if (unit.watershape) {
+					o.uwcom.push(parseInt(unit.watershape));
+				} else {
+					o.uwcom.push(parseInt(attr.raw_value));
 				}
-				if (attr.attribute == "160" || attr.attribute == "161" || attr.attribute == "162" || attr.attribute == "738") {  // 738 = coastal forts
-					var unit = modctx.unitlookup[attr.raw_value];
-					if (unit.landshape) {
-						o.coastrec.push(parseInt(unit.landshape));
-					} else {
-						o.coastrec.push(parseInt(attr.raw_value));
-					}
+			}
+			if (attr.attribute == "187" ||
+				attr.attribute == "189" ||
+				attr.attribute == "190" ||
+				attr.attribute == "191" ||
+				attr.attribute == "213") {
+				var unit = modctx.unitlookup[attr.raw_value];
+				if (unit.watershape) {
+					o.uwunit.push(parseInt(unit.watershape));
+				} else {
+					o.uwunit.push(parseInt(attr.raw_value));
 				}
-				if (attr.attribute == "163") {
-					o.landcom.push(parseInt(attr.raw_value));
-				}
-				if (
-					attr.attribute == "186") {
-					var unit = modctx.unitlookup[attr.raw_value];
-					if (unit.watershape) {
-						o.uwcom.push(parseInt(unit.watershape));
-					} else {
-						o.uwcom.push(parseInt(attr.raw_value));
-					}
-				}
-				if (attr.attribute == "187" ||
-					attr.attribute == "189" ||
-					attr.attribute == "190" ||
-					attr.attribute == "191" ||
-					attr.attribute == "213") {
-					var unit = modctx.unitlookup[attr.raw_value];
-					if (unit.watershape) {
-						o.uwunit.push(parseInt(unit.watershape));
-					} else {
-						o.uwunit.push(parseInt(attr.raw_value));
-					}
-				}
-				if (attr.attribute == "294" || attr.attribute == "412") {
-					o.forestrec.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "295" || attr.attribute == "413") {
-					o.forestcom.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "296") {
-					o.swamprec.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "297") {
-					o.swampcom.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "298" || attr.attribute == "408") {
-					o.mountainrec.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "299" || attr.attribute == "409") {
-					o.mountaincom.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "300" || attr.attribute == "416") {
-					o.wasterec.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "301" || attr.attribute == "417") {
-					o.wastecom.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "302") {
-					o.caverec.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "303") {
-					o.cavecom.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "404" || attr.attribute == "406") {
-					o.plainsrec.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "405" || attr.attribute == "407") {
-					o.plainscom.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "139" ||
-					attr.attribute == "140" ||
-					attr.attribute == "141" ||
-					attr.attribute == "142" ||
-					attr.attribute == "143" ||
-					attr.attribute == "144") {
-					o.heroes.push(parseInt(attr.raw_value));
-				}
-				if (attr.attribute == "145" ||
-					attr.attribute == "146" ||
-					attr.attribute == "149") {
-					o.multiheroes.push(parseInt(attr.raw_value));
-				}
+			}
+			if (attr.attribute == "294" || attr.attribute == "412") {
+				o.forestrec.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "295" || attr.attribute == "413") {
+				o.forestcom.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "296") {
+				o.swamprec.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "297") {
+				o.swampcom.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "298" || attr.attribute == "408") {
+				o.mountainrec.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "299" || attr.attribute == "409") {
+				o.mountaincom.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "300" || attr.attribute == "416") {
+				o.wasterec.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "301" || attr.attribute == "417") {
+				o.wastecom.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "302") {
+				o.caverec.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "303") {
+				o.cavecom.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "404" || attr.attribute == "406") {
+				o.plainsrec.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "405" || attr.attribute == "407") {
+				o.plainscom.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "139" ||
+				attr.attribute == "140" ||
+				attr.attribute == "141" ||
+				attr.attribute == "142" ||
+				attr.attribute == "143" ||
+				attr.attribute == "144") {
+				o.heroes.push(parseInt(attr.raw_value));
+			}
+			if (attr.attribute == "145" ||
+				attr.attribute == "146" ||
+				attr.attribute == "149") {
+				o.multiheroes.push(parseInt(attr.raw_value));
+			}
                 if (attr.attribute == "689") {  // this is for Muspelheim
-					o.commanders.push(parseInt(attr.raw_value));
+				o.commanders.push(parseInt(attr.raw_value));
                 }
                 if (attr.attribute == "688") {  // this is for Muspelheim
-					o.units.push(parseInt(attr.raw_value));
+				o.units.push(parseInt(attr.raw_value));
                 }
-			}
 		}
 
 		//associate spells
@@ -431,20 +466,21 @@ MNation.prepareData_PostMod = function() {
 			u.eracodes = u.eracodes || {};
 			u.eracodes[o.eracode] = true;
 
-			for (var oj=0, attr; attr = modctx.attributes_by_nation[oj];  oj++) {
-				if (parseInt(attr.nation_number) == o.id) {
-					//var attribute = modctx.attributes_lookup[parseInt(attr.attribute_record_id)];
-					if (attr.attribute == "314") {
-						if (u.id == attr.raw_value) {
-							u.cheapgod20 = u.cheapgod20 || [];
-							u.cheapgod20.push(o);
-						}
+			//NB: this is inside a per-unit loop inside a per-nation loop, so
+			//scanning the whole 5000-row table here was the worst of the lot
+			var nattrs = nationRows('attributes_by_nation', o.id);
+			for (var oj=0, attr; attr = nattrs[oj];  oj++) {
+				//var attribute = modctx.attributes_lookup[parseInt(attr.attribute_record_id)];
+				if (attr.attribute == "314") {
+					if (u.id == attr.raw_value) {
+						u.cheapgod20 = u.cheapgod20 || [];
+						u.cheapgod20.push(o);
 					}
-					if (attr.attribute == "315") {
-						if (u.id == attr.raw_value) {
-							u.cheapgod40 = u.cheapgod40 || [];
-							u.cheapgod40.push(o);
-						}
+				}
+				if (attr.attribute == "315") {
+					if (u.id == attr.raw_value) {
+						u.cheapgod40 = u.cheapgod40 || [];
+						u.cheapgod40.push(o);
 					}
 				}
 			}
@@ -632,7 +668,7 @@ MNation.prepareData_PostMod = function() {
 		for (var oi=0; oi<modctx.nationdata.length; oi++) {
 			var o = modctx.nationdata[oi];
 			if (o.era == era) {
-				h+='<option value="'+o.id+'" title="nation '+o.id+'">'+o.fullname+'</option>\n';
+				h+='<option value="'+o.id+'" title="nation '+o.id+'">'+Utils.escapeHtml(o.fullname)+'</option>\n';
 			}
 		}
 	}
@@ -688,7 +724,7 @@ MNation.renderOverlay = function(o) {
 	//header
 	h+='	<div class="overlay-header" title="nation id: '+o.id+'"> ';
 	h+=' 		<input class="overlay-pin" type="image" src="images/PinPageTrns.png" title="unpin" />';
-	h+='		<div class="h2replace">'+o.fullname+'</div> ';
+	h+='		<div class="h2replace">'+Utils.escapeHtml(o.fullname)+'</div> ';
 	h+='	</div>';
 
 	//mid

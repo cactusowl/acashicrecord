@@ -75,11 +75,32 @@ MSite.prepareData_PreMod = function() {
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////
+// unit lookup by id
+//
+// resolving a site's summon list used to walk all ~4300 units looking for one
+// id, once per summon per site. unit ids are fractional for duplicates, hence
+// the rounding. the index is rebuilt if unitdata grows (mods add units).
+// callers still apply the original id test, so a fractional uid behaves as before.
+////////////////////////////////////////////////////////////////////////////
+var _unitsById = null, _unitsByIdLen = -1;
+function unitsWithId(uid) {
+	if (!_unitsById || _unitsByIdLen != modctx.unitdata.length) {
+		_unitsById = {};
+		for (var i=0, u; u=modctx.unitdata[i]; i++) {
+			var k = Math.round(u.id);
+			(_unitsById[k] || (_unitsById[k] = [])).push(u);
+		}
+		_unitsByIdLen = modctx.unitdata.length;
+	}
+	return _unitsById[Math.round(uid)] || [];
+}
+
 MSite.prepareData_PostMod = function() {
 	function parseSummoned(o, sum){
             for (var cc=0; uid=sum[cc]; cc++) {
                 var found = false;
-                for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+                for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
                     if (Math.round(unit.id) == uid && unit.nations && o.nations) {
                         for (var ii=0,natid; natid=o.nations[ii]; ii++) {
                             if (unit.nations[natid] && !found) {
@@ -100,7 +121,7 @@ MSite.prepareData_PostMod = function() {
                 }
                 if (!found) {
                     for (var cc=0; uid=sum[cc]; cc++) {
-                        for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+                        for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
                             if (Math.round(unit.id) == uid && unit.nations && o.nations) {
                                 unit.summonedfrom = unit.summonedfrom || [];
 								if (!unit.summonedfrom.includes(o))
@@ -252,7 +273,7 @@ MSite.prepareData_PostMod = function() {
 		} else {
 			for (var cc=0; uid=o.hcom[cc]; cc++) {
 				var found = false;
-				for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+				for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 					if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 						for (var ii=0,natid; natid=o.nations[ii]; ii++) {
 							if (unit.nations[natid] && !found) {
@@ -269,7 +290,7 @@ MSite.prepareData_PostMod = function() {
 				}
 				if (!found) {
 					for (var cc=0; uid=o.hcom[cc]; cc++) {
-						for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+						for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 							if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 								unit.recruitedby = unit.recruitedby || [];
 								unit.recruitedby.push( o );
@@ -284,7 +305,7 @@ MSite.prepareData_PostMod = function() {
 		} else {
 			for (var cc=0; uid=o.hmon[cc]; cc++) {
 				var found = false;
-				for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+				for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 					if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 						for (var ii=0,natid; natid=o.nations[ii]; ii++) {
 							if (unit.nations[natid] && !found) {
@@ -301,7 +322,7 @@ MSite.prepareData_PostMod = function() {
 				}
 				if (!found) {
 					for (var cc=0; uid=o.hmon[cc]; cc++) {
-						for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+						for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 							if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 								unit.recruitedby = unit.recruitedby || [];
 								unit.recruitedby.push( o );
@@ -316,7 +337,7 @@ MSite.prepareData_PostMod = function() {
 		} else {
 			for (var cc=0; uid=o.com[cc]; cc++) {
 				var found = false;
-				for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+				for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 					if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 						for (var ii=0,natid; natid=o.nations[ii]; ii++) {
 							if (unit.nations[natid] && !found) {
@@ -339,7 +360,7 @@ MSite.prepareData_PostMod = function() {
 				}
 				if (!found) {
 					for (var cc=0; uid=o.com[cc]; cc++) {
-						for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+						for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 							if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 								unit.recruitedby = unit.recruitedby || [];
 								unit.recruitedby.push( o );
@@ -357,7 +378,7 @@ MSite.prepareData_PostMod = function() {
 		} else {
 			for (var cc=0; uid=o.mon[cc]; cc++) {
 				var found = false;
-				for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+				for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 					if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 						for (var ii=0,natid; natid=o.nations[ii]; ii++) {
 							if (unit.nations[natid] && !found) {
@@ -391,7 +412,7 @@ MSite.prepareData_PostMod = function() {
 				}
 				if (!found) {
 					for (var cc=0; uid=o.mon[cc]; cc++) {
-						for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+						for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 							if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 								unit.recruitedby = unit.recruitedby || [];
 								unit.recruitedby.push( o );
@@ -660,7 +681,7 @@ function list_units(arr, o) {
 	//create array of refs
 	var tokens = [];
 	for (var i=0, uid; uid= arr[i];  i++) {
-		for (var uniti=0, unit;  unit= modctx.unitdata[uniti];  uniti++) {
+		for (var uniti=0, unit, _uwid=unitsWithId(uid);  unit= _uwid[uniti];  uniti++) {
 			if (Math.round(unit.id) == uid && unit.nations && o.nations) {
 				for (var ii=0,natid; natid=o.nations[ii]; ii++) {
 					if (unit.nations[natid]) {
@@ -934,7 +955,7 @@ MSite.renderOverlay = function(o) {
 	//header
 	h+='	<div class="overlay-header" title="site id: '+o.id+'"> ';
 	h+='		<p style="float:right; height:0px;">'+o.path+' (lvl '+o.level+')</p>';
-	h+='		<div class="h2replace">'+o.name+'</div> ';
+	h+='		<div class="h2replace">'+Utils.escapeHtml(o.name)+'</div> ';
 
 	//mid
 	h+='	</div>';

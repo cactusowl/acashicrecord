@@ -1580,6 +1580,7 @@ MUnit.CGrid = Utils.Class( DMI.CGrid, function() {
 			generic: $(that.domselp+" input.generic:checked").val(),
 			national: $(that.domselp+" input.national:checked").val()
 		};
+		args.customjs = this.getCustomJs(args.properties);
 		args.properties = Utils.propertiesWithKeys(args.properties);
 
 		if ($.isEmptyObject(args.types)) delete args.types;
@@ -2698,6 +2699,27 @@ var ignorekeys = {
 	noremount:1,
 };
 
+////////////////////////////////////////////////////////////////////////////
+// display tables, exposed
+//
+// these drive renderOverlay below. the nation card view renders the same
+// values in a different layout, so it needs the same key lists, labels and
+// value formatters - exposing them here keeps there being ONE definition of
+// how a unit stat is named and formatted.
+////////////////////////////////////////////////////////////////////////////
+MUnit.display = {
+	aliases:    aliases,
+	formats:    formats,
+	main:       displayorder,
+	main2:      displayorder2,
+	main3:      displayorder3,
+	cmdr:       displayorder_cmdr,
+	pretender:  displayorder_pret,
+	other:      displayorder_other,
+	flags:      flagorder,
+	ignorekeys: ignorekeys
+};
+
 MUnit.renderOverlay = function(o, isPopup) {
 	MUnit.prepareForRender(o);
 	var descrpath = 'gamedata/unitdescr/';
@@ -2710,7 +2732,7 @@ MUnit.renderOverlay = function(o, isPopup) {
 	h+='	<div class="overlay-header" title="unit id:'+o.id+'"> ';
 	h+=' 		<input class="overlay-pin" type="image" src="images/PinPageTrns.png" title="unpin" />';
 
-	h+='		<div class="h2replace">'+o.fullname+'</div> ';
+	h+='		<div class="h2replace">'+Utils.escapeHtml(o.fullname)+'</div> ';
 
 	//nation/commander info
 	var nref = DMI.MNation.nationUnitRefs(o.nations);
@@ -2738,10 +2760,12 @@ MUnit.renderOverlay = function(o, isPopup) {
 	h+=' 		</td></table></tr> ';
 	h+=' 		</table> ';
 
-	h+='	<img style="float:right; clear:right; vertical-align:top; margin-right:25px" title="Toggle attack sprite" src="'+o.sprite.url1+'" onmouseover="this.style.cursor=\'pointer\'" onclick="if (this.src.indexOf(\''+o.sprite.url1+'\') != -1) {this.src = \''+o.sprite.url2+'\';} else { this.src = \''+o.sprite.url1+'\';}"/>';
+	//sprite paths can come from a mod, so they are escaped and passed as data
+	//attributes; the toggle itself is a delegated handler (see main.js)
+	h+= Format.SpriteToggle(o.sprite.url1, o.sprite.url2, 'Toggle attack sprite');
 	if (o.unmountedspr) {
-	h+='	<img style="float:right; clear:right; vertical-align:top; margin-right:25px" title="Toggle rider sprite" src="'+o.sprite.unmountedspr1+'" onmouseover="this.style.cursor=\'pointer\'" onclick="if (this.src.indexOf(\''+o.sprite.unmountedspr1+'\') != -1) {this.src = \''+o.sprite.unmountedspr2+'\';} else { this.src = \''+o.sprite.unmountedspr1+'\';}"/>';
-	}	
+	h+= Format.SpriteToggle(o.sprite.unmountedspr1, o.sprite.unmountedspr2, 'Toggle rider sprite');
+	}
 
 
 	var tags = [];
@@ -2850,7 +2874,7 @@ MUnit.renderOverlay = function(o, isPopup) {
 	h+='		<div class="overlay-descr pane-extension '+uid+'"></div>';
 
 	if (o.descr)
-			Utils.insertContent( '<p>'+o.descr+'</p>', 'div.'+uid );
+			Utils.insertContent( Utils.renderDescr(o.descr), 'div.'+uid );
 	else {
 			 var url = descrpath + Utils.paddedNum(o.id, 4) + '.txt';
 			 Utils.loadContent( url, 'div.'+uid );

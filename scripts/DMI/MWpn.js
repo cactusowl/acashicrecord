@@ -295,6 +295,15 @@ var ignorekeys = {
 };
 
 
+//damage-type tags for a weapon: [[label, modcommand], ...]
+//eg [['Slashing Damage','slash'], ['Armor Piercing','armorpiercing'], ['Magic weapon','magic']]
+//these live in a 64-bit modifier mask, so they go through bitfieldValues.
+MWpn.damageTags = function(w) {
+	var effects = MWpn.getEffect(w);
+	if (!effects) return [];
+	return MWpn.bitfieldValues(effects.modifiers_mask, modctx.effect_modifier_bits_lookup, w);
+}
+
 MWpn.renderOverlay = function(o, baseAtt) {
 	//template
 	var h=''
@@ -305,7 +314,7 @@ MWpn.renderOverlay = function(o, baseAtt) {
 	//header
 	h+='	<div class="overlay-header" title="weap id: '+o.id+'"> ';
 	h+='		<p style="float:right; height:0px;">'+slotusage+'</p>';
-	h+='		<div class="h2replace">'+o.name+'</div> ';
+	h+='		<div class="h2replace">'+Utils.escapeHtml(o.name)+'</div> ';
 	h+='	</div>';
 
 	//mid

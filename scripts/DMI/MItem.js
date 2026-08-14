@@ -55,8 +55,8 @@ MItem.prepareData_PostMod = function() {
 		o.name = o.name || '(undefined)';
 		o.constlevel = parseInt(o.constlevel);
 
-		if (o.descr)
-			o.descr = '<p>' + o.descr.replace('\n','</p><p>') + '</p>';
+		//NB: o.descr is kept as PLAIN TEXT. it is mod-supplied, so it is escaped
+		//and split into paragraphs at render time by Utils.renderDescr.
 
 		if (o.restricted) {
 			// Parse the restricted nations to a list of IDs
@@ -281,6 +281,7 @@ MItem.CGrid = Utils.Class( DMI.CGrid, function() {
 			mlevels: {},
 			mpaths: ''
 		};
+		args.customjs = this.getCustomJs(args.properties);
 		args.properties = Utils.propertiesWithKeys(args.properties);
 
 
@@ -945,7 +946,7 @@ MItem.renderOverlay = function(o) {
 	//header
 	h+='	<div class="overlay-header" title="item id:'+o.id+'"> ';
 	h+='		<div class="item-image"><img style="float:right; clear:right; vertical-align:top; margin-right:25px" src="'+o.sprite+'";}"/>&nbsp;</div>';
-	h+='		<div class="h2replace">'+o.name+'</div> ';
+	h+='		<div class="h2replace">'+Utils.escapeHtml(o.name)+'</div> ';
 	h+='		<p>'+formatItemType[o.type]+' '+formatItemCon[o.constlevel]+'</p>';
 
 	//mid
@@ -1003,7 +1004,7 @@ MItem.renderOverlay = function(o) {
 	h+='		<div class="overlay-descr pane-extension '+uid+'"></div>';
 
 	if (o.descr)
-			Utils.insertContent( '<p>'+o.descr+'</p>', 'div.'+uid );
+			Utils.insertContent( Utils.renderDescr(o.descr), 'div.'+uid );
 	else {
 			var url = descrpath + Utils.descrFilename(o.name);
 			Utils.loadContent( url, 'div.'+uid );

@@ -1,0 +1,743 @@
+/****************************************************************************
+  Nation view
+
+  Written mobile-first: the base rules target a phone, and the only media
+  query widens the card grid once there is room. Everything lives inside
+  #nation-page so none of it can disturb the slickgrid pages.
+
+  Group colours are set once here as custom properties and referenced by the
+  chips, the group headings and the card stripes, so a group's colour is
+  defined in exactly one place.
+****************************************************************************/
+
+#nation-page {
+	--g-recruit:   #4a72b0;
+	--g-cap:       #b07d1a;
+	--g-terrain:   #4a8f5a;
+	--g-foreign:   #8a5fa8;
+	--g-site:      #2f8f8f;
+	--g-hero:      #b04a4a;
+	--g-summon:    #7a58c4;
+	--g-pretender: #7a7268;
+	--g-other:     #8a8a8a;
+
+	--ink:      #2b2620;
+	--ink-soft: #6b6055;
+	--rule:     #d9cdb8;
+	--card:     #fffdf7;
+	--parchment:#efe7d5;
+
+	position: absolute;
+	top: 0; left: 0; right: 0; bottom: 0;
+	background: var(--parchment);
+	color: var(--ink);
+	font-family: Verdana, Geneva, sans-serif;
+	z-index: 5;
+}
+
+#nation-page .nv-root {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+/* host for the app's shared header (page tabs / permalink / mod status).
+   it is moved in and out of here by show(), so style the slot, not the guest. */
+#nation-page .nv-shared {
+	flex: none;
+	max-height: 40%;
+	overflow-y: auto;
+}
+#nation-page .nv-shared #primary-details { background: transparent; }
+
+/**************************** top bar ****************************/
+
+#nation-page .nv-bar {
+	flex: none;
+	display: flex;
+	gap: 8px;
+	padding: 8px;
+	background: #e3d9c2;
+	border-bottom: 1px solid var(--rule);
+}
+
+#nation-page .nv-nation-btn {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 44px;			/* touch target */
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	padding: 0 12px;
+	font: bold 15px/1.2 Verdana, sans-serif;
+	color: var(--ink);
+	background: var(--card);
+	border: 2px solid #ac8400;
+	border-radius: 6px;
+	cursor: pointer;
+	text-align: left;
+}
+#nation-page .nv-nation-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+#nation-page .nv-caret { flex: none; opacity: .6; }
+
+#nation-page .nv-search,
+#nation-page .nv-picker-search {
+	flex: 1 1 40%;
+	min-width: 0;
+	min-height: 44px;
+	padding: 0 10px;
+	font-size: 15px;			/* 16px-ish stops ios zooming the field on focus */
+	color: var(--ink);
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+}
+
+/**************************** category chips ****************************/
+
+#nation-page .nv-chips {
+	flex: none;
+	display: flex;
+	gap: 6px;
+	padding: 8px;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	background: #e9e0cb;
+	border-bottom: 1px solid var(--rule);
+	scrollbar-width: thin;
+}
+
+#nation-page .nv-chip {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 36px;
+	padding: 0 10px;
+	font: 12px/1 Verdana, sans-serif;
+	color: var(--ink);
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-radius: 18px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+#nation-page .nv-chip .nv-swatch {
+	width: 10px; height: 10px;
+	border-radius: 50%;
+	background: var(--g-other);
+}
+#nation-page .nv-chip .nv-count {
+	padding: 2px 6px;
+	font-size: 11px;
+	color: var(--ink-soft);
+	background: #efe7d5;
+	border-radius: 10px;
+}
+#nation-page .nv-chip.nv-off {
+	opacity: .45;
+	text-decoration: line-through;
+}
+
+/* second row: where the nation raises its recruits. subordinate to the section
+   chips above, so lighter and smaller, and it disappears with its section. */
+#nation-page .nv-dchips {
+	padding: 5px 8px;
+	background: #efe7d5;
+}
+#nation-page .nv-dchip {
+	min-height: 30px;
+	padding: 0 8px;
+	font-size: 11px;
+	color: var(--ink-soft);
+	background: transparent;
+	border-style: dashed;
+}
+#nation-page .nv-dchip .nv-count { background: #e3d9c2; }
+
+/**************************** card list ****************************/
+
+#nation-page .nv-list {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	padding: 8px;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 8px;
+	align-content: start;
+}
+
+#nation-page .nv-group-head {
+	grid-column: 1 / -1;
+	margin: 8px 0 0;
+	padding: 4px 2px;
+	font: bold 12px/1 Verdana, sans-serif;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: var(--g-other);
+	border-bottom: 2px solid currentColor;
+}
+
+/****************************************************************************
+  Unit card
+
+  Laid out after the game's own unit card: a parchment title bar, a dark stat
+  panel with three columns and the sprite on the right, an icon row for
+  abilities, and a parchment footer holding the weapon and armour tables.
+****************************************************************************/
+
+#nation-page .nv-card {
+	display: block;
+	width: 100%;
+	padding: 0;
+	box-sizing: border-box;
+	/* NB: no overflow:hidden here. cards are grid items, and a grid item whose
+	   overflow is not visible gets an automatic minimum size of 0 - it then
+	   clips its own content instead of making its row taller. the rounded
+	   corners are put on the first and last strips instead.
+	   align-self:start keeps a short card from stretching to its row. */
+	align-self: start;
+	font: 13px/1.35 Verdana, sans-serif;
+	color: var(--ink);
+	text-align: left;
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-left: 5px solid var(--g-other);
+	border-radius: 6px;
+	cursor: pointer;
+}
+#nation-page .nv-card:active { filter: brightness(1.08); }
+#nation-page .nv-card:focus-visible {
+	outline: 2px solid #ac8400;
+	outline-offset: 1px;
+}
+#nation-page .nv-card-inner { display: block; min-width: 0; }
+
+/* the card's own width drives its internals, not the viewport's - a card in a
+   four-column desktop grid is no wider than one on a phone. browsers without
+   container queries keep the single-column fallbacks below. */
+#nation-page .nv-card { container-type: inline-size; }
+
+/**** unit class colours ****************************************************
+  What kind of unit a card is, is carried by its colour rather than a badge:
+
+    unit  grey    - not a commander
+    cmdr  blue    - a commander with no magic
+    holy  yellow  - a commander with holy paths only
+    mage  magenta - a commander with any other path
+
+  The title bar takes the saturated tone and the stat panel a dark, desaturated
+  one of the same hue. Both come from these two custom properties, so the face
+  tabs (which join the panel) stay in step automatically.
+
+  NB: this is a different axis from the coloured stripe down the card's left
+  edge, which says where the nation GETS the unit. One is what it is, the other
+  is how you obtain it.
+****************************************************************************/
+#nation-page .nv-card                  { --title-bg: #d7d3ca; --panel-bg: #3f4247; }
+#nation-page .nv-card[data-cls=cmdr]   { --title-bg: #a9c8e0; --panel-bg: #36414c; }
+#nation-page .nv-card[data-cls=holy]   { --title-bg: #e2d391; --panel-bg: #46412c; }
+#nation-page .nv-card[data-cls=mage]   { --title-bg: #d7a6d0; --panel-bg: #453449; }
+
+/**** title bar ****/
+#nation-page .nv-title {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	padding: 6px 10px;
+	background: var(--title-bg);
+	border-bottom: 1px solid rgba(0,0,0,.18);
+	border-radius: 4px 4px 0 0;
+}
+/* the last strip of the card carries the bottom corners, whichever it is */
+#nation-page .nv-card-inner > :last-child { border-radius: 0 0 4px 4px; }
+#nation-page .nv-name {
+	font-family: Georgia, 'Times New Roman', serif;
+	font-size: 15px;
+	font-weight: bold;
+	color: #2b2016;
+}
+/* slow to recruit decides whether you can field one at all, so it sits in the
+   title rather than among the ability chips */
+#nation-page .nv-slow {
+	padding: 1px 5px;
+	font-size: 10px;
+	font-weight: bold;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	color: #fff;
+	background: #96502f;
+	border-radius: 3px;
+}
+#nation-page .nv-origin {
+	margin-left: auto;
+	font-size: 11px;
+	color: #5d4f3c;
+}
+
+/**** the other bodies on a mounted card ****/
+/* a tab strip along the bottom of the title bar: the rider, any co-riders and
+   the mount. click a tab at any width; on a touchscreen you can also swipe the
+   card sideways. the active tab takes the colour of the stat panel below it so
+   the two read as one surface. */
+#nation-page .nv-facebar {
+	flex: 1 0 100%;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 3px;
+	margin: 5px -10px -7px;		/* bleed onto the title bar's bottom edge */
+	padding: 0 8px;
+	position: relative;
+	z-index: 1;					/* sit over the title bar's border */
+}
+#nation-page .nv-facechip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	min-height: 30px;
+	padding: 2px 10px 2px 4px;
+	font-size: 11px;
+	color: #4a3d2c;
+	background: #dbcdb0;
+	border: 1px solid #b0a087;
+	border-bottom: none;
+	border-radius: 5px 5px 0 0;
+	cursor: pointer;
+	white-space: nowrap;
+}
+#nation-page .nv-facechip img {
+	width: 22px;
+	height: 22px;
+	object-fit: contain;
+	image-rendering: pixelated;
+}
+#nation-page .nv-facechip.is-active {
+	color: #e9e5dc;
+	background: var(--panel-bg);		/* joins the panel below it */
+	border-color: var(--panel-bg);
+}
+
+/* one body at a time */
+#nation-page .nv-faces { display: block; }
+#nation-page .nv-faces > .nv-face { display: none; }
+#nation-page .nv-faces > .nv-face.is-active { display: block; }
+
+/**** dark stat panel ****/
+#nation-page .nv-panel {
+	display: block;
+	position: relative;
+	padding: 8px 10px;
+	background: var(--panel-bg);
+	color: #e9e5dc;
+}
+#nation-page .nv-spr {
+	position: absolute;
+	top: 6px;
+	right: 8px;
+	width: 56px;
+	height: 56px;
+	object-fit: contain;
+	object-position: top right;
+	image-rendering: pixelated;
+	pointer-events: none;
+}
+
+/* three columns, as on the game card. they collapse to two and then one as
+   the card narrows, rather than squeezing the numbers off the edge. */
+#nation-page .nv-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+	gap: 0 10px;
+	padding-right: 62px;			/* clear of the sprite */
+	font-size: 12px;
+}
+#nation-page .nv-statcol { display: block; }
+
+#nation-page .nv-stat {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	line-height: 1.55;
+}
+#nation-page .nv-stat i {
+	font-style: normal;
+	color: #b9b2a5;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+#nation-page .nv-stat b {
+	font-weight: bold;
+	color: #fff;
+	font-variant-numeric: tabular-nums;
+}
+
+/**** ability icon row ****/
+#nation-page .nv-abil {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 5px;
+	margin-top: 8px;
+	padding-top: 7px;
+	border-top: 1px solid #55585e;
+}
+#nation-page .nv-abpaths {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0 5px;
+	margin-right: 4px;
+	padding: 2px 6px;
+	background: #4a4d53;
+	border-radius: 4px;
+}
+/* one random draw - "(150% FAWE)" - never split across lines.
+   the paths inside sit in a two-row block, so the brackets are drawn large
+   enough to enclose it. */
+#nation-page .nv-draw {
+	display: inline-flex;
+	align-items: center;
+	gap: 1px;
+	white-space: nowrap;
+	font-size: 11px;
+	color: #d8d2c4;
+}
+#nation-page .nv-paren {
+	font-weight: normal;
+	font-size: 24px;
+	line-height: 0.8;
+	color: #a49b8b;
+}
+#nation-page .nv-drawpct { margin-right: 2px; }
+
+/* paths of one draw, two rows high, filled left-to-right then down */
+#nation-page .nv-pathstack {
+	display: inline-grid;
+	gap: 0 1px;
+	align-items: center;
+	justify-items: center;
+}
+
+/* icon with its number in the corner - the game relies on hover for this,
+   which a touchscreen does not have */
+#nation-page .nv-ab {
+	position: relative;
+	display: inline-flex;
+	width: 26px;
+	height: 26px;
+	align-items: center;
+	justify-content: center;
+}
+/* fixed box, so the row does not reflow as icons arrive - lazy images with no
+   reserved size make the whole card jump while you are scrolling it */
+#nation-page .nv-ab img {
+	width: 24px;
+	height: 24px;
+	object-fit: contain;
+	image-rendering: pixelated;
+}
+#nation-page .nv-ab em {
+	position: absolute;
+	right: -2px;
+	bottom: -3px;
+	padding: 0 2px;
+	font: bold 9px/1.25 Verdana, sans-serif;
+	font-style: normal;
+	color: #fff;
+	background: #22242899;
+	border-radius: 3px;
+	text-shadow: 0 0 2px #000;
+}
+
+/* abilities with no icon keep their words */
+#nation-page .nv-tag {
+	padding: 1px 6px;
+	font-size: 10px;
+	color: #ddd7ca;
+	background: #4a4d53;
+	border-radius: 9px;
+}
+
+/**** parchment footer: weapon + armour tables ****/
+#nation-page .nv-tables {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 0 16px;
+	padding: 6px 10px 8px;
+	background: #e7dcc4;
+	font-size: 12px;
+}
+#nation-page .nv-tbl { display: block; min-width: 0; }
+#nation-page .nv-tbl + .nv-tbl { margin-top: 6px; }
+
+#nation-page .nv-thead,
+#nation-page .nv-trow {
+	display: grid;
+	align-items: baseline;
+	gap: 6px;
+	min-width: 0;
+}
+#nation-page .nv-wtbl .nv-thead,
+#nation-page .nv-wtbl .nv-trow { grid-template-columns: minmax(0,1fr) 2em 2em 6.4em; }
+#nation-page .nv-atbl .nv-thead,
+#nation-page .nv-atbl .nv-trow { grid-template-columns: minmax(0,1fr) 2.2em 2.2em 2.2em 2.2em; }
+
+#nation-page .nv-thead i {
+	font-style: normal;
+	font-size: 11px;
+	color: #6b5a3e;
+	border-bottom: 1px solid #c9b795;
+}
+#nation-page .nv-trow i {
+	font-style: normal;
+	color: #2b2016;
+	font-variant-numeric: tabular-nums;
+}
+#nation-page .nv-thead i:not(.nv-c0),
+#nation-page .nv-trow i:not(.nv-c0) { text-align: right; }
+/* name column: the name keeps a readable minimum and the modifier chips wrap
+   under it rather than squeezing it down to an ellipsis */
+#nation-page .nv-c0 {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 2px 4px;
+	min-width: 0;
+	font-weight: bold;
+}
+#nation-page .nv-wname {
+	flex: 1 1 auto;
+	min-width: 5.5em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+#nation-page .nv-c0 .nv-wmod { flex: none; }
+
+/* side by side once the card itself is wide enough, as on the game card */
+@container (min-width: 460px) {
+	#nation-page .nv-tables { grid-template-columns: 1.2fr 1fr; }
+	#nation-page .nv-tbl + .nv-tbl { margin-top: 0; }
+}
+
+/* damage-type glyphs sit with the number they describe */
+#nation-page .nv-dmgcell {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 2px;
+	white-space: nowrap;
+}
+/* 32px source down to 14px is not an integer ratio, so let it resample
+   smoothly - nearest-neighbour shreds these at this size */
+#nation-page .nv-dmgicon {
+	flex: none;
+	width: 14px;
+	height: 14px;
+	object-fit: contain;
+	vertical-align: middle;
+}
+
+/* short modifiers riding next to a name or a value (2H, +Str/2, AP, AN) */
+#nation-page .nv-wmod {
+	padding: 0 3px;
+	font-size: 10px;
+	font-weight: bold;
+	color: #6b4a2a;
+	background: #f2e9d5;
+	border: 1px solid #d3c3a1;
+	border-radius: 3px;
+	white-space: nowrap;
+}
+
+/* whatever modifiers are left, on one line under the weapon */
+#nation-page .nv-dtags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px;
+	margin: 1px 0 3px;
+}
+#nation-page .nv-dtag {
+	padding: 0 4px;
+	font-size: 10px;
+	color: #5c4526;
+	background: #f2e9d5;
+	border: 1px solid #d3c3a1;
+	border-radius: 3px;
+}
+
+/* per-group colour, applied to the card stripe, the heading and the chip dot */
+#nation-page [data-group=recruit]   { border-left-color: var(--g-recruit); }
+#nation-page [data-group=cap]       { border-left-color: var(--g-cap); }
+#nation-page [data-group=terrain]   { border-left-color: var(--g-terrain); }
+#nation-page [data-group=foreign]   { border-left-color: var(--g-foreign); }
+#nation-page [data-group=site]      { border-left-color: var(--g-site); }
+#nation-page [data-group=hero]      { border-left-color: var(--g-hero); }
+#nation-page [data-group=summon]    { border-left-color: var(--g-summon); }
+#nation-page [data-group=pretender] { border-left-color: var(--g-pretender); }
+
+#nation-page .nv-group-head[data-group=recruit]   { color: var(--g-recruit); }
+#nation-page .nv-group-head[data-group=cap]       { color: var(--g-cap); }
+#nation-page .nv-group-head[data-group=terrain]   { color: var(--g-terrain); }
+#nation-page .nv-group-head[data-group=foreign]   { color: var(--g-foreign); }
+#nation-page .nv-group-head[data-group=site]      { color: var(--g-site); }
+#nation-page .nv-group-head[data-group=hero]      { color: var(--g-hero); }
+#nation-page .nv-group-head[data-group=summon]    { color: var(--g-summon); }
+#nation-page .nv-group-head[data-group=pretender] { color: var(--g-pretender); }
+
+#nation-page .nv-chip[data-group=recruit]   .nv-swatch { background: var(--g-recruit); }
+#nation-page .nv-chip[data-group=cap]       .nv-swatch { background: var(--g-cap); }
+#nation-page .nv-chip[data-group=terrain]   .nv-swatch { background: var(--g-terrain); }
+#nation-page .nv-chip[data-group=foreign]   .nv-swatch { background: var(--g-foreign); }
+#nation-page .nv-chip[data-group=site]      .nv-swatch { background: var(--g-site); }
+#nation-page .nv-chip[data-group=hero]      .nv-swatch { background: var(--g-hero); }
+#nation-page .nv-chip[data-group=summon]    .nv-swatch { background: var(--g-summon); }
+#nation-page .nv-chip[data-group=pretender] .nv-swatch { background: var(--g-pretender); }
+
+/**************************** nation picker ****************************/
+
+#nation-page .nv-picker,
+#nation-page .nv-sheet {
+	position: absolute;
+	top: 0; left: 0; right: 0; bottom: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--parchment);
+	z-index: 10;
+}
+
+#nation-page .nv-picker-bar,
+#nation-page .nv-sheet-bar {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px;
+	background: #e3d9c2;
+	border-bottom: 1px solid var(--rule);
+}
+
+#nation-page .nv-close,
+#nation-page .nv-back {
+	flex: none;
+	min-width: 44px;
+	min-height: 44px;
+	font: bold 20px/1 Verdana, sans-serif;
+	color: var(--ink);
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+	cursor: pointer;
+}
+#nation-page .nv-back {
+	min-width: 0;
+	padding: 0 12px;
+	font-size: 14px;
+}
+
+#nation-page .nv-picker-list {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	padding: 8px;
+}
+
+#nation-page .nv-era {
+	margin: 12px 2px 6px;
+	font: bold 12px/1 Verdana, sans-serif;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	color: var(--ink-soft);
+	border-bottom: 1px solid var(--rule);
+	padding-bottom: 4px;
+}
+
+#nation-page .nv-nation-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 2px 8px;
+	width: 100%;
+	min-height: 48px;
+	margin-bottom: 6px;
+	padding: 8px 10px;
+	font: 14px/1.3 Verdana, sans-serif;
+	color: var(--ink);
+	text-align: left;
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+	cursor: pointer;
+}
+#nation-page .nv-nation-row:active { background: #f4eedd; }
+#nation-page .nv-era-tag {
+	flex: none;
+	width: 26px;
+	font-size: 11px;
+	font-weight: bold;
+	color: var(--ink-soft);
+}
+#nation-page .nv-nation-title { font-weight: bold; }
+#nation-page .nv-nation-sub {
+	font-size: 12px;
+	color: var(--ink-soft);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/**************************** detail sheet ****************************/
+
+#nation-page .nv-sheet-bar { justify-content: space-between; }
+
+#nation-page .nv-sheet-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	padding: 8px;
+}
+/* the shared overlay renderer draws its own pin/close button for the
+   draggable desktop panes; the sheet has a real one in its bar */
+#nation-page .nv-sheet-body .overlay-pin { display: none !important; }
+#nation-page .nv-sheet-body .overlay-contents {
+	max-width: 100%;
+	background: var(--card);
+	border: 1px solid var(--rule);
+	border-radius: 6px;
+}
+#nation-page .nv-sheet-body table { max-width: 100%; }
+#nation-page .nv-sheet-body img { max-width: 100%; height: auto; }
+
+/**************************** wider screens ****************************/
+
+@media (min-width: 700px) {
+	#nation-page .nv-list {
+		grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+		padding: 12px;
+	}
+	#nation-page .nv-bar { padding: 10px 12px; }
+	#nation-page .nv-search { flex: 0 1 320px; }
+	#nation-page .nv-nation-btn { flex: 0 1 380px; }
+	#nation-page .nv-picker-list {
+		column-width: 320px;
+		column-gap: 16px;
+		padding: 12px;
+	}
+	#nation-page .nv-era { break-after: avoid; }
+	#nation-page .nv-nation-row { break-inside: avoid; }
+	#nation-page .nv-sheet-body { padding: 16px; }
+	#nation-page .nv-sheet-body .overlay-contents {
+		max-width: 900px;
+		margin: 0 auto;
+	}
+}
