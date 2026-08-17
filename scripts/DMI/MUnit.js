@@ -1467,13 +1467,27 @@ MUnit.prepareForRender = function(o) {
 			delete o.rcostsort;
 		}
 
+		//NB: the parts are kept as well as the combined figure. Everything below
+		//overwrites o.prot with the total, and the overlay preserved the pieces
+		//only inside a tooltip string - which is no use to anything that wants
+		//to show them separately. See protRow() in MNationView.js.
+		o.prot_nat = Math.round(p_nat);
+
 		if (p_body || p_head) {
+			//what the armour itself gives, before it is mixed with the hide
+			//underneath it
+			o.prot_armor_head = p_head;
+			o.prot_armor_body = p_body;
+
 			//displayed values
 			p_body = (p_nat + p_body - (p_nat * p_body/40));
 			p_head = (p_nat + p_head - (p_nat * p_head/40));
 			var p_total = ((p_body * 4) + p_head) / 5;
 
 			p_total = (p_head > 10 && p_general == 0) ? Math.floor(p_total) : p_total;
+
+			o.prot_head = Math.round(p_head);
+			o.prot_body = Math.round(p_body);
 
 			//display strings
 			o.prot = String(Math.round(p_total));
@@ -2696,6 +2710,8 @@ var ignorekeys = {
 
 	_ressizeExplicitlySet:1,
 	xpshapemon:1,
+	//the pieces of the protection sum, kept for the card views
+	prot_nat:1, prot_armor_head:1, prot_armor_body:1, prot_head:1, prot_body:1,
 	noremount:1,
 };
 

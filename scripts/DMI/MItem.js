@@ -936,6 +936,24 @@ var formatItemCon = {	1:'(lvl 1)',
 			12:''
 		};
 
+////////////////////////////////////////////////////////////////////////////
+// display tables
+//
+// exported so the nation view's item cards can format a value exactly as the
+// detail overlay formats it, instead of growing a second set of rules that
+// drift apart. same arrangement as MUnit.display / MSpell.display.
+////////////////////////////////////////////////////////////////////////////
+MItem.display = {
+	aliases:    aliases,
+	formats:    formats,
+	armor:      displayorder_armor,
+	main:       displayorder2,
+	flags:      flagorder,
+	ignorekeys: ignorekeys,
+	typeNames:  formatItemType,
+	conNames:   formatItemCon
+};
+
 MItem.renderOverlay = function(o) {
 	var descrpath = 'gamedata/itemdescr/';
 

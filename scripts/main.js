@@ -31,11 +31,22 @@ DMI.isFirefoxBrowser = function()
 // `ctor` names the constructor on the module, defaulting to the slickgrid one.
 // the nation page is a card view rather than a grid, so it supplies its own -
 // it only has to implement show/hide/showIds/detachShowingDetails.
+// `button` is the page tab that opens this page, when it is not the page's own
+// name. The Unit / Item / Spell tabs open the card view; the slickgrid page of
+// the same data keeps its name (the grid code and every filter id are built on
+// it) and is reached from the card view's [table] button, or by permalink.
+//
+// `nobutton` marks a page no tab opens directly.
 DMI.pages = [
-	{ name: 'nation',module: 'MNationView', ctor: 'View' },
-	{ name: 'item',  module: 'MItem'  },
-	{ name: 'spell', module: 'MSpell' },
-	{ name: 'unit',  module: 'MUnit'  },
+	{ name: 'nation',    module: 'MNationView', ctor: 'View' },
+
+	{ name: 'unitcards', module: 'MCardPages', ctor: 'Units',  button: 'unit'  },
+	{ name: 'itemcards', module: 'MCardPages', ctor: 'Items',  button: 'item'  },
+	{ name: 'spellcards',module: 'MCardPages', ctor: 'Spells', button: 'spell' },
+
+	{ name: 'item',  module: 'MItem',  nobutton: true },
+	{ name: 'spell', module: 'MSpell', nobutton: true },
+	{ name: 'unit',  module: 'MUnit',  nobutton: true },
 	{ name: 'site',  module: 'MSite'  },
 	{ name: 'merc',  module: 'MMerc'  },
 	{ name: 'event', module: 'MEvent' },
@@ -199,34 +210,44 @@ DMI.initGrids = function() {
 			if (p.name == name) page = p;
 			else if (p.grid) p.grid.hide();
 		}
-		if (!page) return;
+		if (!page) return false;
 
 		if (!page.grid)
 			page.grid = new DMI[page.module][page.ctor || 'CGrid']();
 
 		page.grid.show();
 
+		//the tab that stands for this page is not always its own name - the
+		//card views and the grids of the same data share one.
+		//
+		//only the page a tab OPENS disables it. A grid reached from its card
+		//view's [table] button leaves every tab live, so that same tab is the
+		//way back - a disabled button fires no clicks and would strand you.
 		$(".page-button").prop('disabled', false).removeClass('disabled');
-		$("#"+name+"-page-button").prop('disabled', true).addClass('disabled');
+		if (!page.nobutton)
+			$("#"+(page.button || name)+"-page-button").prop('disabled', true).addClass('disabled');
 
 		//focus search box
 		$("div.filters-text."+name+"view input.search-box").focus();
 
 		DMI.Utils.saveState();
+		return true;
 	}
 
 	for (var i=0, p; p=DMI.pages[i]; i++) {
+		if (p.nobutton) continue;		//reached from another page, or by permalink
 		//bind name per iteration (var is function scoped)
-		(function(name){
-			$("#"+name+"-page-button").click(function(){ DMI.showPage(name); });
-		})(p.name);
+		(function(name, tab){
+			$("#"+tab+"-page-button").click(function(){ DMI.showPage(name); });
+		})(p.name, p.button || p.name);
 	}
 
 	//names of pages whose tab button is currently visible, in display order
 	function visiblePageNames() {
 		var names = [];
 		for (var i=0, p; p=DMI.pages[i]; i++)
-			if ($("#"+p.name+"-page-button:visible").length) names.push(p.name);
+			if (!p.nobutton && $("#"+(p.button||p.name)+"-page-button:visible").length)
+				names.push(p.name);
 		return names;
 	}
 
@@ -300,6 +321,51 @@ DMI.initGrids = function() {
 			$('#global-unpin-all-btn').hide();
 	});
 
+
+	////////////////////////////////////////////////////////////////////////
+	// one-click mods
+	//
+	// the two mods most games use, as checkboxes rather than a trip through
+	// the mod selection screen. mod data is applied during the load pipeline,
+	// so there is no way to add one to a running page - ticking a box rewrites
+	// the ?mod= parameters and reloads.
+	//
+	// they load by filename, which is why they work where the [load mods] list
+	// does not: that list is scraped from a directory autoindex, and a static
+	// host (GitHub Pages) does not generate one.
+	////////////////////////////////////////////////////////////////////////
+	var quickMods = {};
+	$('input.quick-mod').each(function(){ quickMods[$(this).val()] = 1; });
+
+	var loadedMods = (new ParsedQueryString()).params('mod');
+
+	$('input.quick-mod')
+		.each(function(){
+			$(this).prop('checked', DMI.Utils.inArray($(this).val(), loadedMods));
+		})
+		.bind('change', function(){
+			//anything chosen through the mod selection screen stays chosen
+			var mods = [];
+			for (var i=0; i<loadedMods.length; i++)
+				if (!quickMods[loadedMods[i]]) mods.push(loadedMods[i]);
+
+			$('input.quick-mod').each(function(){
+				if ($(this).prop('checked')) mods.push($(this).val());
+			});
+
+			//keep every other parameter, replace the mod ones
+			var kept = [];
+			var qs = location.search.replace(/^\?/, '');
+			if (qs) {
+				var parts = qs.split(/[&;]/);
+				for (var i=0; i<parts.length; i++)
+					if (parts[i] && parts[i].split('=')[0] != 'mod') kept.push(parts[i]);
+			}
+			for (var i=0; i<mods.length; i++)
+				kept.push('mod=' + encodeURIComponent(mods[i]));
+
+			location.href = location.pathname + (kept.length ? '?' + kept.join('&') : '');
+		});
 
 	//display shared panels (hidden while loading)
 	$("div.primary-panel").show();

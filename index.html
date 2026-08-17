@@ -9,19 +9,19 @@
    <meta name="viewport" content="width=device-width, initial-scale=1">
    <title>Dom6 Mod Inspector</title>
 
-   <!-- ?v=31 -->
+   <!-- ?v=47 -->
    
    	<link rel="shortcut icon" href="favicon.ico" />
    	<link rel="stylesheet" type="text/css" href="scripts/slickgrid/slick.grid.css" />
 	<link rel="stylesheet" type="text/css" href="scripts/slickgrid/css/smoothness/jquery-ui-1.8.16.custom.css" />
 	<link rel="stylesheet" type="text/css" href="scripts/slickgrid/examples/examples.css" />
-	<link rel="stylesheet" type="text/css" href="scripts/master.css?v=31"  />
+	<link rel="stylesheet" type="text/css" href="scripts/master.css?v=47"  />
 	<link rel="stylesheet" type="text/css" href="scripts/select2/select2.min.css"  />
-	<link rel="stylesheet" type="text/css" href="scripts/nationview.css?v=31"  />
+	<link rel="stylesheet" type="text/css" href="scripts/nationview.css?v=47"  />
 	
 </head>
 <body>
-	<script type="text/javascript">var versionCode='?v=31';</script>
+	<script type="text/javascript">var versionCode='?v=47';</script>
 	<script type="text/javascript" src="scripts/slickgrid/lib/jquery-1.7.min.js"></script>
 	<script type="text/javascript" src="scripts/slickgrid/lib/jquery-ui-1.8.16.custom.min.js"></script>
 	<script type="text/javascript" src="scripts/slickgrid/lib/jquery.event.drag-2.2.js"></script>
@@ -34,30 +34,31 @@
 	<script type="text/javascript" src="scripts/ParsedQueryString.js"></script>
 	<script type="text/javascript" src="scripts/jquery.cookie.js"></script>
 
-	<script type="text/javascript" src="scripts/PaneManager.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/Utils.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/Format.js?v=31"></script>
-	<script type="text/javascript" src="scripts/modconstants.js?v=31"></script>
-	<script type="text/javascript" src="scripts/parsemod.js?v=31"></script>
-	<script type="text/javascript" src="scripts/loaddata.js?v=31"></script>
+	<script type="text/javascript" src="scripts/PaneManager.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/Utils.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/Format.js?v=47"></script>
+	<script type="text/javascript" src="scripts/modconstants.js?v=47"></script>
+	<script type="text/javascript" src="scripts/parsemod.js?v=47"></script>
+	<script type="text/javascript" src="scripts/loaddata.js?v=47"></script>
 	
-	<script type="text/javascript" src="scripts/DMI/CGrid.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MAffliction.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MWpn.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MArmor.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MItem.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/SpellTables.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MSpell.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MUnit.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MNation.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MSite.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MMerc.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MEvent.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/abilityicons.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/MNationView.js?v=31"></script>
-	<script type="text/javascript" src="scripts/DMI/bitfields.js?v=31"></script>
+	<script type="text/javascript" src="scripts/DMI/CGrid.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MAffliction.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MWpn.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MArmor.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MItem.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/SpellTables.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MSpell.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MUnit.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MNation.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MSite.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MMerc.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MEvent.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/abilityicons.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MNationView.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/MCardPages.js?v=47"></script>
+	<script type="text/javascript" src="scripts/DMI/bitfields.js?v=47"></script>
 	
-	<script type="text/javascript" src="scripts/main.js?v=31"></script>
+	<script type="text/javascript" src="scripts/main.js?v=47"></script>
 	<!-- /% SCRIPTS TO COMPILE % -->
 
 	<script>
@@ -116,10 +117,22 @@
 
         <!-- GLOBAL INTERFACE -->
 		<div id="global-tiny-buttons" class="primary-panel">
-			<div style="float:right; clear:right">				
+			<div style="float:right; clear:right">
 				<a style="display:block; float:right; clear:right" href="?selectmods=1" id="select-mods-link" class="tinylink" title="select mods from a list or load from the local filesystem (reloads page)">[load mods]</a>
 					<br />
 				<a style="display:block; float:right; clear:right"href="" id="permalink" class="tinylink" title="link to this page state (use right click > copy link address to share). Pinned details and search setting are encoded in the url.">[permalink]</a>
+			</div>
+
+			<!-- the two mods most games use, one click each. these load by
+			     filename, so unlike the [load mods] list they also work where
+			     the server serves no directory index. -->
+			<div id="quick-mods">
+				<label for="quickmod-wh" title="Worthy Heroes 6.51 - stronger and more numerous national heroes"
+				><input id="quickmod-wh" class="quick-mod" type="checkbox" value="WH_6_5_dom-clockwork_v6.51.dm"
+				/>Worthy Heroes</label>
+				<label for="quickmod-de" title="Dominions Enhanced v2.16 - revises spells, sites, pretenders, mercenaries, items and nations"
+				><input id="quickmod-de" class="quick-mod" type="checkbox" value="DomEnhanced-clockwork_v2.16.dm"
+				/>Dominions Enhanced</label>
 			</div>
 		</div>
 		
@@ -912,9 +925,16 @@
 	<!-- the nation page builds its own contents (scripts/DMI/MNationView.js).
 	     the hidden input carries the chosen nation into the permalink/cookie
 	     via the same saveState mechanism the filter controls use. -->
-	<div id="nation-page" class="page" style="display:none;">
+	<div id="nation-page" class="page nv-page" style="display:none;">
 		<input id="nv-nation" type="hidden" value="" />
 	</div>
+
+	<!-- the card view of the Unit / Item / Spell tabs. These are what those tab
+	     buttons open; the slickgrid page of the same data is a [table] click
+	     away and keeps the full set of filters. See MCardPages.js. -->
+	<div id="unitcards-page" class="page nv-page" style="display:none;"></div>
+	<div id="itemcards-page" class="page nv-page" style="display:none;"></div>
+	<div id="spellcards-page" class="page nv-page" style="display:none;"></div>
 
 	<div id="spell-page" class="page" style="display:none;">
 		<div class="grid-container"></div>

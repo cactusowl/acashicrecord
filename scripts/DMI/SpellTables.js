@@ -65,6 +65,11 @@ function spellBonus(v, baselvl) {
 
 //format functions for spell fields
 // using spellBonus + other field specific stuff
+//exported: several stored figures (damage, number of effects, number summoned)
+//share this "base value plus a bonus per caster level" encoding, and are
+//meaningless printed raw - 2001 means three at path 1, one more per level.
+MSpell.spellBonus = spellBonus;
+
 MSpell.format = {
 
 	damage: function(spell, effect) {

@@ -650,12 +650,16 @@ function deSerializeState(qs) {
 		}
 	}
 
-	//open page
-	var page = pqs.param('page') || 'item';
-	var $btn = $('#'+page+'-page-button');
-	if ($btn.length != 1)
-		$btn = $('#item-page-button');
-	$btn.trigger('click');
+	//open page.
+	//NB: not every page has a tab button of its own - the card views and the
+	//slickgrid pages of the same data share one - so ask showPage first and
+	//only fall back to clicking a tab if it does not know the name.
+	var page = pqs.param('page') || 'itemcards';
+	if (!(DMI.showPage && DMI.showPage(page))) {
+		var $btn = $('#'+page+'-page-button');
+		if ($btn.length != 1) $btn = $('#item-page-button');
+		$btn.trigger('click');
+	}
 
 	//open panes
 	var panes = pqs.param('panes');

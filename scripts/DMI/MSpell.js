@@ -385,6 +385,14 @@ MSpell.prepareData_PostMod = function() {
 				o.summonsunits = o.summonsunits || [];
 				o.summonsunits.push(u);
 
+				//NB: these two do not arrive ALONGSIDE the ordinary summon -
+				//they replace it in a given circumstance (underwater, or in a
+				//cold dominion: the Unseelie half of the Faerie Court). record
+				//which, so a display can say so rather than listing them as
+				//extra summons. 11 spells use them.
+				o.summonconds = o.summonconds || {};
+				o.summonconds[u.id] = (attr.attribute == "1700") ? 'underwater' : 'cold';
+
 				//attach spell to unit
 				u.summonedby = u.summonedby || [];
 				u.summonedby.push( o );
@@ -895,6 +903,25 @@ var ignorekeys = {
 	//common fields
 	name:1,description:1,
 	searchable:1, renderOverlay:1, matchProperty:1
+};
+
+////////////////////////////////////////////////////////////////////////////
+// display tables
+//
+// exported so the nation view's spell cards can format a value exactly as the
+// detail overlay formats it, instead of growing a second set of rules that
+// drift apart. same arrangement as MUnit.display / MItem.display.
+//
+// NB: `ignorekeys` is mutated at load time - Utils.addFlags adds every special
+// flag it lifts out of the effect bitfield, so those keys are not repeated as
+// "strange" rows. A card wanting them must render the bitfield itself.
+////////////////////////////////////////////////////////////////////////////
+MSpell.display = {
+	aliases:    aliases,
+	formats:    formats,
+	main:       displayorder,
+	modding:    moddingkeys,
+	ignorekeys: ignorekeys
 };
 
 MSpell.renderOverlay = function(o) {

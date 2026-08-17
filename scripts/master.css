@@ -754,3 +754,26 @@ div.overlay-header span.modding-inline{ visibility: hidden; }
 .select2-container--default .select2-results>.select2-results__options{
     max-height: 400px !important;
 }
+
+/****************************************************************************
+  One-click mods
+
+  The two mods most games use, in the shared header so they are reachable from
+  every page including the Nation view. Ticking one reloads the page - see
+  main.js - because mods are applied while the data loads.
+****************************************************************************/
+#quick-mods {
+	float: left;
+	font-size: 11px;
+	line-height: 1.5;
+	color: #4a3d2c;
+}
+#quick-mods label {
+	display: block;
+	white-space: nowrap;
+	cursor: pointer;
+}
+#quick-mods input {
+	vertical-align: middle;
+	margin: 0 4px 0 0;
+}
